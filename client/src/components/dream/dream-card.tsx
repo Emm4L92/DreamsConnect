@@ -337,13 +337,13 @@ export function DreamCard({ dream, className = "", showManage = false }: DreamCa
               <Button
                 variant="destructive"
                 className="font-display"
-                // This would be connected to a delete mutation
+                disabled={deleteMutation.isPending}
                 onClick={() => {
-                  // TODO: Implement dream deletion functionality
+                  deleteMutation.mutate(dream.id);
                   setShowDeleteDialog(false);
                 }}
               >
-                {t("Delete", language)}
+                {deleteMutation.isPending ? t("Deleting...", language) : t("Delete", language)}
               </Button>
             </div>
           </DialogContent>

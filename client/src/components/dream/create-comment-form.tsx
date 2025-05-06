@@ -1,62 +1,88 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
 import { useCreateComment } from "@/hooks/use-dreams";
-import { useAuth } from "@/hooks/use-auth";
 import { useLanguage, t } from "@/hooks/use-language";
-import { Loader2 } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 
 interface CreateCommentFormProps {
   dreamId: number;
 }
 
+const commentSchema = z.object({
+  content: z.string()
+    .min(1, "Comment cannot be empty")
+    .max(500, "Comment is too long (maximum 500 characters)")
+});
+
 export function CreateCommentForm({ dreamId }: CreateCommentFormProps) {
-  const { user } = useAuth();
   const { language } = useLanguage();
-  const [content, setContent] = useState("");
-  const mutation = useCreateComment();
+  const commentMutation = useCreateComment();
   
-  if (!user) {
-    return null;
+  const form = useForm<z.infer<typeof commentSchema>>({
+    resolver: zodResolver(commentSchema),
+    defaultValues: {
+      content: "",
+    },
+  });
+  
+  function onSubmit(values: z.infer<typeof commentSchema>) {
+    commentMutation.mutate(
+      { dreamId, content: values.content },
+      {
+        onSuccess: () => {
+          form.reset();
+        }
+      }
+    );
   }
   
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!content.trim()) return;
-    
-    mutation.mutate({
-      dreamId,
-      content: content.trim(),
-    }, {
-      onSuccess: () => {
-        setContent("");
-      }
-    });
-  };
-  
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <Textarea
-        placeholder={t("Write your comment...", language)}
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        className="min-h-[100px]"
-        required
-      />
-      
-      <div className="flex justify-end">
-        <Button 
-          type="submit" 
-          disabled={mutation.isPending || !content.trim()}
-          className="font-display"
-        >
-          {mutation.isPending && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="content"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Textarea 
+                  placeholder={t("Write your comment...", language)}
+                  className="border-2 border-black min-h-[120px] font-sans resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-          {t("Post Comment", language)}
-        </Button>
-      </div>
-    </form>
+        />
+        
+        <div className="flex justify-end">
+          <Button 
+            type="submit" 
+            className="btn-brutal font-display"
+            disabled={commentMutation.isPending}
+          >
+            {commentMutation.isPending ? (
+              <>
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                {t("Submitting...", language)}
+              </>
+            ) : (
+              t("Submit Comment", language)
+            )}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }
