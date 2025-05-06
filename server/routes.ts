@@ -518,6 +518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dream = await storage.getDreamById(dreamId);
       
       if (!dream) {
+        console.log(`[Match] Dream with ID ${dreamId} not found`);
         return;
       }
       
@@ -530,31 +531,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tags = dreamTagsResult.map(t => t.tag);
       
       if (tags.length === 0) {
+        console.log(`[Match] No tags found for dream ${dreamId}`);
         return;
       }
       
-      // Find dreams with similar tags
-      const potentialMatches = await storage.db
-        .select({ 
-          dreamId: dreamTags.dreamId,
-          tagCount: sql<number>`count(*)`,
-          score: sql<number>`count(*) * 100.0 / ${tags.length}`
-        })
-        .from(dreamTags)
-        .where(and(
-          dreamTags.tag.in(tags),
-          sql`${dreamTags.dreamId} != ${dreamId}`
-        ))
-        .groupBy(dreamTags.dreamId)
-        .having(sql`count(*) >= ${Math.ceil(tags.length * 0.5)}`);
+      console.log(`[Match] Processing dream ${dreamId} with tags: ${tags.join(', ')}`);
       
-      // Insert matches that have at least 75% similarity
+      // Find all dreams with at least one matching tag
+      // We'll use SQL directly for this query since we had issues with tag.in
+      const potentialMatchesResult = await storage.db.execute(sql`
+        SELECT 
+          dream_tags.dream_id as "dreamId", 
+          COUNT(*) as "tagCount",
+          COUNT(*) * 100.0 / ${tags.length} as "score"
+        FROM dream_tags
+        WHERE dream_tags.tag IN (${sql.join(tags)})
+          AND dream_tags.dream_id != ${dreamId}
+        GROUP BY dream_tags.dream_id
+        HAVING COUNT(*) >= ${Math.ceil(tags.length * 0.3)} 
+      `);
+      
+      const potentialMatches = potentialMatchesResult.rows;
+      console.log(`[Match] Found ${potentialMatches.length} potential matches`);
+      
+      // Process matches with enhanced content-based similarity
       for (const match of potentialMatches) {
-        if (match.score >= 75) {
+        // Parse the score as it might be a string from SQL
+        const tagScore = parseFloat(match.score as any) || 0;
+        
+        if (tagScore >= 50) {
           const matchedDream = await storage.getDreamById(match.dreamId);
+          
+          if (!matchedDream) {
+            console.log(`[Match] Matched dream ${match.dreamId} not found, skipping`);
+            continue;
+          }
           
           // Don't match dreams from the same user
           if (matchedDream.authorId === dream.authorId) {
+            console.log(`[Match] Skipping match with same author: ${matchedDream.authorId}`);
+            continue;
+          }
+          
+          // Calculate content similarity for better matching
+          let contentScore = 0;
+          try {
+            const { calculateSimilarity } = await import('./nlp');
+            contentScore = calculateSimilarity(dream.content, matchedDream.content);
+            console.log(`[Match] Content similarity between dreams ${dreamId} and ${match.dreamId}: ${contentScore}`);
+          } catch (err) {
+            console.error(`[Match] Error calculating content similarity:`, err);
+          }
+          
+          // Final score is weighted average of tag-based and content-based similarity
+          const finalScore = (tagScore * 0.6) + (contentScore * 0.4);
+          console.log(`[Match] Final score: tag=${tagScore}, content=${contentScore}, final=${finalScore}`);
+          
+          // Only create matches with significant similarity
+          if (finalScore < 60) {
+            console.log(`[Match] Score too low (${finalScore}), skipping match`);
             continue;
           }
           
@@ -562,7 +597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.db.insert(dreamMatches).values({
             dreamId,
             matchedDreamId: match.dreamId,
-            score: match.score,
+            score: finalScore,
             createdAt: new Date()
           }).onConflictDoNothing();
           

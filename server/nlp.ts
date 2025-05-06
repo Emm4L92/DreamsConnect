@@ -1,54 +1,219 @@
-// Simple NLP for generating tags from dream descriptions
+// Multi-language NLP for generating tags from dream descriptions
 // In a production environment, this could be replaced with more sophisticated NLP libraries
 // or API calls to services like OpenAI
 
 /**
- * A set of predefined categories and their related keywords
+ * A set of predefined categories and their related keywords in different languages
  */
-const tagCategories = {
-  places: [
-    'house', 'home', 'building', 'city', 'mountain', 'mountains', 'ocean', 'sea', 
-    'beach', 'forest', 'woods', 'jungle', 'desert', 'river', 'lake', 'island', 
-    'cave', 'castle', 'school', 'office', 'hospital', 'church', 'park', 'garden',
-    'sky', 'space', 'underwater', 'subway', 'train', 'airplane', 'car', 'road', 'street'
-  ],
-  actions: [
-    'flying', 'falling', 'running', 'swimming', 'walking', 'jumping', 'climbing',
-    'fighting', 'hiding', 'escaping', 'chasing', 'searching', 'finding', 'losing',
-    'talking', 'singing', 'dancing', 'eating', 'drinking', 'sleeping', 'waking',
-    'traveling', 'driving', 'riding', 'sailing', 'diving', 'floating'
-  ],
-  emotions: [
-    'fear', 'afraid', 'scared', 'happy', 'excited', 'sad', 'angry', 'confused',
-    'lost', 'alone', 'trapped', 'free', 'peaceful', 'calm', 'anxious', 'stressed',
-    'overwhelmed', 'love', 'hate', 'joy', 'sorrow', 'surprise', 'disgust', 'shame',
-    'embarrassed', 'proud', 'guilty', 'jealous', 'envious', 'nostalgic'
-  ],
-  characters: [
-    'family', 'friend', 'stranger', 'monster', 'animal', 'dog', 'cat', 'bird',
-    'snake', 'spider', 'insect', 'bear', 'wolf', 'lion', 'tiger', 'fish', 'shark',
-    'human', 'child', 'adult', 'parent', 'mother', 'father', 'sister', 'brother',
-    'baby', 'ghost', 'spirit', 'angel', 'demon', 'alien', 'robot', 'zombie'
-  ],
-  elements: [
-    'water', 'fire', 'earth', 'air', 'wind', 'light', 'dark', 'darkness', 'sun',
-    'moon', 'stars', 'cloud', 'clouds', 'rain', 'snow', 'ice', 'storm', 'thunder', 
-    'lightning', 'rainbow', 'shadow', 'nature', 'tree', 'trees', 'flower', 'flowers',
-    'rock', 'rocks', 'mountain', 'mountains', 'metal'
-  ],
-  concepts: [
-    'time', 'death', 'life', 'birth', 'future', 'past', 'memory', 'memories',
-    'dream', 'nightmare', 'reality', 'fantasy', 'magic', 'power', 'control',
-    'freedom', 'prison', 'escape', 'transformation', 'change', 'beginning', 'end',
-    'infinity', 'void', 'universe', 'world', 'dimension', 'portal', 'door', 'gates'
-  ]
+interface LanguageKeywords {
+  [key: string]: string[];
+}
+
+interface TagCategories {
+  [key: string]: LanguageKeywords;
+}
+
+const tagCategories: TagCategories = {
+  places: {
+    en: [
+      'house', 'home', 'building', 'city', 'mountain', 'mountains', 'ocean', 'sea', 
+      'beach', 'forest', 'woods', 'jungle', 'desert', 'river', 'lake', 'island', 
+      'cave', 'castle', 'school', 'office', 'hospital', 'church', 'park', 'garden',
+      'sky', 'space', 'underwater', 'subway', 'train', 'airplane', 'car', 'road', 'street'
+    ],
+    it: [
+      'casa', 'edificio', 'città', 'montagna', 'montagne', 'oceano', 'mare', 
+      'spiaggia', 'foresta', 'bosco', 'giungla', 'deserto', 'fiume', 'lago', 'isola', 
+      'grotta', 'castello', 'scuola', 'ufficio', 'ospedale', 'chiesa', 'parco', 'giardino',
+      'cielo', 'spazio', 'sottomarino', 'metropolitana', 'treno', 'aereo', 'auto', 'strada', 'via'
+    ],
+    es: [
+      'casa', 'edificio', 'ciudad', 'montaña', 'montañas', 'océano', 'mar', 
+      'playa', 'bosque', 'selva', 'desierto', 'río', 'lago', 'isla', 
+      'cueva', 'castillo', 'escuela', 'oficina', 'hospital', 'iglesia', 'parque', 'jardín',
+      'cielo', 'espacio', 'submarino', 'metro', 'tren', 'avión', 'coche', 'carretera', 'calle'
+    ],
+    fr: [
+      'maison', 'bâtiment', 'ville', 'montagne', 'montagnes', 'océan', 'mer', 
+      'plage', 'forêt', 'bois', 'jungle', 'désert', 'rivière', 'lac', 'île', 
+      'grotte', 'château', 'école', 'bureau', 'hôpital', 'église', 'parc', 'jardin',
+      'ciel', 'espace', 'sous-marin', 'métro', 'train', 'avion', 'voiture', 'route', 'rue'
+    ],
+    de: [
+      'haus', 'gebäude', 'stadt', 'berg', 'berge', 'ozean', 'meer', 
+      'strand', 'wald', 'dschungel', 'wüste', 'fluss', 'see', 'insel', 
+      'höhle', 'schloss', 'schule', 'büro', 'krankenhaus', 'kirche', 'park', 'garten',
+      'himmel', 'weltraum', 'unterwasser', 'u-bahn', 'zug', 'flugzeug', 'auto', 'straße', 'weg'
+    ]
+  },
+  actions: {
+    en: [
+      'flying', 'falling', 'running', 'swimming', 'walking', 'jumping', 'climbing',
+      'fighting', 'hiding', 'escaping', 'chasing', 'searching', 'finding', 'losing',
+      'talking', 'singing', 'dancing', 'eating', 'drinking', 'sleeping', 'waking',
+      'traveling', 'driving', 'riding', 'sailing', 'diving', 'floating'
+    ],
+    it: [
+      'volare', 'cadere', 'correre', 'nuotare', 'camminare', 'saltare', 'arrampicare',
+      'combattere', 'nascondere', 'fuggire', 'inseguire', 'cercare', 'trovare', 'perdere',
+      'parlare', 'cantare', 'ballare', 'mangiare', 'bere', 'dormire', 'svegliare',
+      'viaggiare', 'guidare', 'cavalcare', 'navigare', 'tuffare', 'galleggiare'
+    ],
+    es: [
+      'volar', 'caer', 'correr', 'nadar', 'caminar', 'saltar', 'escalar',
+      'luchar', 'esconder', 'escapar', 'perseguir', 'buscar', 'encontrar', 'perder',
+      'hablar', 'cantar', 'bailar', 'comer', 'beber', 'dormir', 'despertar',
+      'viajar', 'conducir', 'montar', 'navegar', 'sumergir', 'flotar'
+    ],
+    fr: [
+      'voler', 'tomber', 'courir', 'nager', 'marcher', 'sauter', 'grimper',
+      'combattre', 'cacher', 'échapper', 'poursuivre', 'chercher', 'trouver', 'perdre',
+      'parler', 'chanter', 'danser', 'manger', 'boire', 'dormir', 'réveiller',
+      'voyager', 'conduire', 'monter', 'naviguer', 'plonger', 'flotter'
+    ],
+    de: [
+      'fliegen', 'fallen', 'rennen', 'schwimmen', 'gehen', 'springen', 'klettern',
+      'kämpfen', 'verstecken', 'entkommen', 'jagen', 'suchen', 'finden', 'verlieren',
+      'sprechen', 'singen', 'tanzen', 'essen', 'trinken', 'schlafen', 'aufwachen',
+      'reisen', 'fahren', 'reiten', 'segeln', 'tauchen', 'schweben'
+    ]
+  },
+  emotions: {
+    en: [
+      'fear', 'afraid', 'scared', 'happy', 'excited', 'sad', 'angry', 'confused',
+      'lost', 'alone', 'trapped', 'free', 'peaceful', 'calm', 'anxious', 'stressed',
+      'overwhelmed', 'love', 'hate', 'joy', 'sorrow', 'surprise', 'disgust', 'shame'
+    ],
+    it: [
+      'paura', 'spaventato', 'terrorizzato', 'felice', 'eccitato', 'triste', 'arrabbiato', 'confuso',
+      'perso', 'solo', 'intrappolato', 'libero', 'pacifico', 'calmo', 'ansioso', 'stressato',
+      'sopraffatto', 'amore', 'odio', 'gioia', 'dolore', 'sorpresa', 'disgusto', 'vergogna'
+    ],
+    es: [
+      'miedo', 'asustado', 'aterrado', 'feliz', 'emocionado', 'triste', 'enfadado', 'confundido',
+      'perdido', 'solo', 'atrapado', 'libre', 'pacífico', 'tranquilo', 'ansioso', 'estresado',
+      'abrumado', 'amor', 'odio', 'alegría', 'tristeza', 'sorpresa', 'asco', 'vergüenza'
+    ],
+    fr: [
+      'peur', 'effrayé', 'terrifié', 'heureux', 'excité', 'triste', 'en colère', 'confus',
+      'perdu', 'seul', 'piégé', 'libre', 'paisible', 'calme', 'anxieux', 'stressé',
+      'débordé', 'amour', 'haine', 'joie', 'chagrin', 'surprise', 'dégoût', 'honte'
+    ],
+    de: [
+      'angst', 'ängstlich', 'erschrocken', 'glücklich', 'aufgeregt', 'traurig', 'wütend', 'verwirrt',
+      'verloren', 'allein', 'gefangen', 'frei', 'friedlich', 'ruhig', 'besorgt', 'gestresst',
+      'überfordert', 'liebe', 'hass', 'freude', 'kummer', 'überraschung', 'ekel', 'scham'
+    ]
+  },
+  characters: {
+    en: [
+      'family', 'friend', 'stranger', 'monster', 'animal', 'dog', 'cat', 'bird',
+      'snake', 'spider', 'insect', 'bear', 'wolf', 'lion', 'tiger', 'fish', 'shark',
+      'human', 'child', 'adult', 'mother', 'father', 'sister', 'brother',
+      'ghost', 'spirit', 'angel', 'demon', 'alien', 'robot', 'zombie'
+    ],
+    it: [
+      'famiglia', 'amico', 'sconosciuto', 'mostro', 'animale', 'cane', 'gatto', 'uccello',
+      'serpente', 'ragno', 'insetto', 'orso', 'lupo', 'leone', 'tigre', 'pesce', 'squalo',
+      'umano', 'bambino', 'adulto', 'madre', 'padre', 'sorella', 'fratello',
+      'fantasma', 'spirito', 'angelo', 'demone', 'alieno', 'robot', 'zombi'
+    ],
+    es: [
+      'familia', 'amigo', 'extraño', 'monstruo', 'animal', 'perro', 'gato', 'pájaro',
+      'serpiente', 'araña', 'insecto', 'oso', 'lobo', 'león', 'tigre', 'pez', 'tiburón',
+      'humano', 'niño', 'adulto', 'madre', 'padre', 'hermana', 'hermano',
+      'fantasma', 'espíritu', 'ángel', 'demonio', 'extraterrestre', 'robot', 'zombi'
+    ],
+    fr: [
+      'famille', 'ami', 'étranger', 'monstre', 'animal', 'chien', 'chat', 'oiseau',
+      'serpent', 'araignée', 'insecte', 'ours', 'loup', 'lion', 'tigre', 'poisson', 'requin',
+      'humain', 'enfant', 'adulte', 'mère', 'père', 'soeur', 'frère',
+      'fantôme', 'esprit', 'ange', 'démon', 'extraterrestre', 'robot', 'zombie'
+    ],
+    de: [
+      'familie', 'freund', 'fremder', 'monster', 'tier', 'hund', 'katze', 'vogel',
+      'schlange', 'spinne', 'insekt', 'bär', 'wolf', 'löwe', 'tiger', 'fisch', 'hai',
+      'mensch', 'kind', 'erwachsener', 'mutter', 'vater', 'schwester', 'bruder',
+      'geist', 'seele', 'engel', 'dämon', 'alien', 'roboter', 'zombie'
+    ]
+  },
+  elements: {
+    en: [
+      'water', 'fire', 'earth', 'air', 'wind', 'light', 'dark', 'darkness', 'sun',
+      'moon', 'stars', 'cloud', 'rain', 'snow', 'ice', 'storm', 'thunder', 
+      'lightning', 'rainbow', 'shadow', 'nature', 'tree', 'flower', 'rock', 'mountain'
+    ],
+    it: [
+      'acqua', 'fuoco', 'terra', 'aria', 'vento', 'luce', 'buio', 'oscurità', 'sole',
+      'luna', 'stelle', 'nuvola', 'pioggia', 'neve', 'ghiaccio', 'tempesta', 'tuono', 
+      'fulmine', 'arcobaleno', 'ombra', 'natura', 'albero', 'fiore', 'roccia', 'montagna'
+    ],
+    es: [
+      'agua', 'fuego', 'tierra', 'aire', 'viento', 'luz', 'oscuro', 'oscuridad', 'sol',
+      'luna', 'estrellas', 'nube', 'lluvia', 'nieve', 'hielo', 'tormenta', 'trueno', 
+      'relámpago', 'arcoíris', 'sombra', 'naturaleza', 'árbol', 'flor', 'roca', 'montaña'
+    ],
+    fr: [
+      'eau', 'feu', 'terre', 'air', 'vent', 'lumière', 'sombre', 'obscurité', 'soleil',
+      'lune', 'étoiles', 'nuage', 'pluie', 'neige', 'glace', 'tempête', 'tonnerre', 
+      'éclair', 'arc-en-ciel', 'ombre', 'nature', 'arbre', 'fleur', 'rocher', 'montagne'
+    ],
+    de: [
+      'wasser', 'feuer', 'erde', 'luft', 'wind', 'licht', 'dunkel', 'dunkelheit', 'sonne',
+      'mond', 'sterne', 'wolke', 'regen', 'schnee', 'eis', 'sturm', 'donner', 
+      'blitz', 'regenbogen', 'schatten', 'natur', 'baum', 'blume', 'felsen', 'berg'
+    ]
+  },
+  concepts: {
+    en: [
+      'time', 'death', 'life', 'birth', 'future', 'past', 'memory', 'dream', 
+      'nightmare', 'reality', 'fantasy', 'magic', 'power', 'control', 'freedom', 
+      'escape', 'transformation', 'change', 'beginning', 'end', 'infinity', 
+      'universe', 'world', 'dimension', 'portal', 'door'
+    ],
+    it: [
+      'tempo', 'morte', 'vita', 'nascita', 'futuro', 'passato', 'memoria', 'sogno', 
+      'incubo', 'realtà', 'fantasia', 'magia', 'potere', 'controllo', 'libertà', 
+      'fuga', 'trasformazione', 'cambiamento', 'inizio', 'fine', 'infinito', 
+      'universo', 'mondo', 'dimensione', 'portale', 'porta'
+    ],
+    es: [
+      'tiempo', 'muerte', 'vida', 'nacimiento', 'futuro', 'pasado', 'memoria', 'sueño', 
+      'pesadilla', 'realidad', 'fantasía', 'magia', 'poder', 'control', 'libertad', 
+      'escape', 'transformación', 'cambio', 'comienzo', 'fin', 'infinito', 
+      'universo', 'mundo', 'dimensión', 'portal', 'puerta'
+    ],
+    fr: [
+      'temps', 'mort', 'vie', 'naissance', 'futur', 'passé', 'mémoire', 'rêve', 
+      'cauchemar', 'réalité', 'fantaisie', 'magie', 'pouvoir', 'contrôle', 'liberté', 
+      'évasion', 'transformation', 'changement', 'début', 'fin', 'infini', 
+      'univers', 'monde', 'dimension', 'portail', 'porte'
+    ],
+    de: [
+      'zeit', 'tod', 'leben', 'geburt', 'zukunft', 'vergangenheit', 'erinnerung', 'traum', 
+      'albtraum', 'realität', 'fantasie', 'magie', 'kraft', 'kontrolle', 'freiheit', 
+      'flucht', 'verwandlung', 'veränderung', 'anfang', 'ende', 'unendlichkeit', 
+      'universum', 'welt', 'dimension', 'portal', 'tür'
+    ]
+  }
 };
 
-// Flattened list of all keywords with their categories
-const keywordCategories: Map<string, string> = new Map();
-for (const [category, keywords] of Object.entries(tagCategories)) {
-  for (const keyword of keywords) {
-    keywordCategories.set(keyword, category);
+// Language-specific keyword maps
+const keywordCategoriesByLang: Record<string, Map<string, string>> = {};
+
+// Initialize maps for each supported language
+const supportedLanguages = ['en', 'it', 'es', 'fr', 'de'];
+
+for (const lang of supportedLanguages) {
+  keywordCategoriesByLang[lang] = new Map<string, string>();
+  
+  // Populate language-specific keyword maps
+  for (const [category, langKeywords] of Object.entries(tagCategories)) {
+    if (langKeywords[lang]) {
+      for (const keyword of langKeywords[lang]) {
+        keywordCategoriesByLang[lang].set(keyword, category);
+      }
+    }
   }
 }
 
@@ -62,33 +227,99 @@ export async function generateTags(content: string, language: string): Promise<s
   // Convert content to lowercase for easier matching
   const normalizedContent = content.toLowerCase();
   
+  // Map ISO language codes to our supported codes
+  const langCode = matchLanguage(language);
+  
   // Use a Set to avoid duplicate tags
   const tagsSet = new Set<string>();
   
-  // Find matching keywords in the content
-  for (const keyword of keywordCategories.keys()) {
-    // Simple word boundary check to match whole words
-    const regex = new RegExp(`\\b${keyword}\\b`, 'i');
-    if (regex.test(normalizedContent)) {
-      tagsSet.add(keyword);
-    }
-  }
+  // Get category representatives (one tag per category to ensure diversity)
+  const categoryTags: Record<string, string[]> = {
+    places: [],
+    actions: [],
+    emotions: [],
+    characters: [],
+    elements: [],
+    concepts: []
+  };
   
-  // If we don't have enough tags, try partial matching for longer content
-  if (tagsSet.size < 3 && normalizedContent.length > 50) {
-    for (const keyword of keywordCategories.keys()) {
-      if (normalizedContent.includes(keyword) && keyword.length > 4) {
-        tagsSet.add(keyword);
+  // Match language-specific tags first
+  if (keywordCategoriesByLang[langCode]) {
+    const keywordMap = keywordCategoriesByLang[langCode];
+    
+    // First pass: match whole words with boundaries
+    keywordMap.forEach((category, keyword) => {
+      try {
+        // Simple approach that works in all browsers
+        const regex = new RegExp(`(^|\\W)${keyword}(\\W|$)`, 'i');
+        if (regex.test(normalizedContent)) {
+          // Add to category-specific array
+          categoryTags[category].push(keyword);
+          tagsSet.add(keyword);
+        }
+      } catch (e) {
+        // In case of regex compilation error, fall back to simple includes
+        if (normalizedContent.includes(keyword)) {
+          categoryTags[category].push(keyword);
+          tagsSet.add(keyword);
+        }
       }
+    });
+    
+    // Second pass: match substrings for longer keywords (at least 5 chars)
+    if (tagsSet.size < 3 && normalizedContent.length > 50) {
+      keywordMap.forEach((category, keyword) => {
+        if (keyword.length >= 5 && normalizedContent.includes(keyword) && !tagsSet.has(keyword)) {
+          categoryTags[category].push(keyword);
+          tagsSet.add(keyword);
+        }
+      });
     }
   }
   
-  // Convert the Set back to an array and limit to 5 tags
-  const tags = Array.from(tagsSet).slice(0, 5);
+  // Look for English tags as a fallback if we don't have enough
+  if (langCode !== 'en' && tagsSet.size < 3) {
+    const englishKeywordMap = keywordCategoriesByLang['en'];
+    
+    englishKeywordMap.forEach((category, keyword) => {
+      try {
+        const regex = new RegExp(`(^|\\W)${keyword}(\\W|$)`, 'i');
+        if (regex.test(normalizedContent) && !tagsSet.has(keyword)) {
+          categoryTags[category].push(keyword);
+          tagsSet.add(keyword);
+        }
+      } catch (e) {
+        // Fallback
+        if (normalizedContent.includes(keyword) && !tagsSet.has(keyword)) {
+          categoryTags[category].push(keyword);
+          tagsSet.add(keyword);
+        }
+      }
+    });
+  }
+  
+  // Select the best tags, prioritizing category diversity
+  const prioritizedTags: string[] = [];
+  
+  // Take one tag from each category that has tags
+  for (const category of Object.keys(categoryTags)) {
+    if (categoryTags[category].length > 0) {
+      // Take the first tag from this category
+      prioritizedTags.push(categoryTags[category][0]);
+    }
+  }
+  
+  // Add remaining tags if we don't have enough
+  if (prioritizedTags.length < 5) {
+    const remainingTags = Array.from(tagsSet).filter(tag => !prioritizedTags.includes(tag));
+    prioritizedTags.push(...remainingTags.slice(0, 5 - prioritizedTags.length));
+  }
+  
+  const finalTags = prioritizedTags.slice(0, 5);
   
   // If still no tags found, provide some generic tags based on language
-  if (tags.length === 0) {
-    switch(language) {
+  if (finalTags.length === 0) {
+    switch(langCode) {
       case 'it':
         return ['sogno', 'mistero', 'esperienza'];
       case 'es':
@@ -102,7 +333,39 @@ export async function generateTags(content: string, language: string): Promise<s
     }
   }
   
-  return tags;
+  return finalTags;
+}
+
+/**
+ * Maps any language code to our supported languages
+ */
+function matchLanguage(lang: string): string {
+  // Normalize language code (e.g., 'it-IT' -> 'it')
+  const normLang = lang.split('-')[0].toLowerCase();
+  
+  // Check if language is directly supported
+  if (supportedLanguages.includes(normLang)) {
+    return normLang;
+  }
+  
+  // Language family fallbacks
+  const languageFamilies: Record<string, string> = {
+    // Spanish variants
+    'es_mx': 'es', 'es_ar': 'es', 'es_co': 'es',
+    // French variants
+    'fr_ca': 'fr', 'fr_be': 'fr', 'fr_ch': 'fr',
+    // German variants
+    'de_at': 'de', 'de_ch': 'de',
+    // Italian variants
+    'it_ch': 'it'
+  };
+  
+  if (languageFamilies[normLang]) {
+    return languageFamilies[normLang];
+  }
+  
+  // Default to English
+  return 'en';
 }
 
 /**
@@ -112,21 +375,52 @@ export async function generateTags(content: string, language: string): Promise<s
  * @returns Similarity score (0-100)
  */
 export function calculateSimilarity(content1: string, content2: string): number {
-  // Simple implementation based on common keywords
-  const words1 = new Set(content1.toLowerCase().split(/\W+/).filter(word => word.length > 3));
-  const words2 = new Set(content2.toLowerCase().split(/\W+/).filter(word => word.length > 3));
+  if (!content1 || !content2) return 0;
   
-  // Count words in common
-  let commonCount = 0;
-  for (const word of words1) {
-    if (words2.has(word)) {
-      commonCount++;
+  // Normalize and tokenize text
+  const text1 = content1.toLowerCase();
+  const text2 = content2.toLowerCase();
+  
+  // Extract significant words (3+ chars)
+  const words1 = text1.split(/\W+/).filter(word => word.length > 3);
+  const words2 = text2.split(/\W+/).filter(word => word.length > 3);
+  
+  if (words1.length === 0 || words2.length === 0) return 0;
+  
+  // Create Sets for faster lookups
+  const uniqueWords1 = new Set(words1);
+  const uniqueWords2 = new Set(words2);
+  
+  // Count common words
+  let commonWords = 0;
+  for (const word of uniqueWords1) {
+    if (uniqueWords2.has(word)) {
+      commonWords++;
     }
   }
   
-  // Calculate Jaccard similarity
-  const totalUniqueWords = new Set([...words1, ...words2]).size;
+  // Calculate weighted similarity score
+  // Base Jaccard similarity
+  const totalUniqueWords = uniqueWords1.size + uniqueWords2.size - commonWords;
   if (totalUniqueWords === 0) return 0;
+  const jaccardSimilarity = (commonWords / totalUniqueWords) * 100;
   
-  return (commonCount / totalUniqueWords) * 100;
+  // Length similarity - penalize large differences in length
+  const shorterLength = Math.min(text1.length, text2.length);
+  const longerLength = Math.max(text1.length, text2.length);
+  const lengthRatio = shorterLength / longerLength;
+  const lengthSimilarity = lengthRatio * 100;
+  
+  // Keyword density - if common words represent a high percentage of either text, boost similarity
+  const keywordDensity1 = commonWords / uniqueWords1.size;
+  const keywordDensity2 = commonWords / uniqueWords2.size;
+  const keywordDensityBoost = Math.max(keywordDensity1, keywordDensity2) * 20; // gives 0-20% boost
+  
+  // Final weighted score - emphasize Jaccard similarity but consider other factors
+  const weightedScore = (jaccardSimilarity * 0.65) + 
+                        (lengthSimilarity * 0.15) + 
+                        (keywordDensityBoost * 0.2);
+  
+  // Ensure score is in 0-100 range
+  return Math.min(100, Math.max(0, weightedScore));
 }
