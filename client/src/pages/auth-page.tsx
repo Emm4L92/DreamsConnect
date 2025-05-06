@@ -3,13 +3,15 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { insertUserSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage, t } from "@/hooks/use-language";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Redirect } from "wouter";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { LanguageSelector } from "@/components/ui/language-selector";
 
 const loginSchema = z.object({
   username: z.string().min(3, {
@@ -32,6 +34,7 @@ const registerSchema = insertUserSchema.extend({
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("login");
   const { loginMutation, registerMutation, user } = useAuth();
+  const { language } = useLanguage();
   
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -80,21 +83,24 @@ export default function AuthPage() {
               <span className="text-secondary">Connect</span>
             </CardTitle>
             <CardDescription>
-              Share your dreams and connect with others who had similar experiences
+              {t("Share your dreams and connect with others who had similar experiences", language)}
             </CardDescription>
+            <div className="flex justify-end">
+              <LanguageSelector variant="ghost" size="sm" minimal />
+            </div>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="login" className="font-medium">Login</TabsTrigger>
-                <TabsTrigger value="register" className="font-medium">Register</TabsTrigger>
+                <TabsTrigger value="login" className="font-medium">{t("Login", language)}</TabsTrigger>
+                <TabsTrigger value="register" className="font-medium">{t("Register", language)}</TabsTrigger>
               </TabsList>
               
               <TabsContent value="login">
                 <form onSubmit={loginForm.handleSubmit(onLoginSubmit)}>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="login-username">Username</Label>
+                      <Label htmlFor="login-username">{t("Username", language)}</Label>
                       <Input
                         id="login-username"
                         className="input-brutal"
@@ -106,7 +112,7 @@ export default function AuthPage() {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="login-password">Password</Label>
+                      <Label htmlFor="login-password">{t("Password", language)}</Label>
                       <Input
                         id="login-password"
                         type="password"
@@ -123,7 +129,7 @@ export default function AuthPage() {
                       className="w-full bg-primary hover:bg-primary/90 btn-brutal rotate-1"
                       disabled={loginMutation.isPending}
                     >
-                      {loginMutation.isPending ? "Logging in..." : "Login"}
+                      {loginMutation.isPending ? t("Logging in...", language) : t("Login", language)}
                     </Button>
                   </div>
                 </form>
@@ -133,7 +139,7 @@ export default function AuthPage() {
                 <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)}>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="register-username">Username</Label>
+                      <Label htmlFor="register-username">{t("Username", language)}</Label>
                       <Input
                         id="register-username"
                         className="input-brutal"
@@ -145,7 +151,7 @@ export default function AuthPage() {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="register-password">Password</Label>
+                      <Label htmlFor="register-password">{t("Password", language)}</Label>
                       <Input
                         id="register-password"
                         type="password"
@@ -158,7 +164,7 @@ export default function AuthPage() {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="register-confirm-password">Confirm Password</Label>
+                      <Label htmlFor="register-confirm-password">{t("Confirm Password", language)}</Label>
                       <Input
                         id="register-confirm-password"
                         type="password"
@@ -175,7 +181,7 @@ export default function AuthPage() {
                       className="w-full bg-accent text-black hover:bg-accent/90 btn-brutal rotate-neg-1"
                       disabled={registerMutation.isPending}
                     >
-                      {registerMutation.isPending ? "Creating account..." : "Create account"}
+                      {registerMutation.isPending ? t("Creating account...", language) : t("Create account", language)}
                     </Button>
                   </div>
                 </form>
@@ -186,22 +192,22 @@ export default function AuthPage() {
             <p className="text-sm text-center">
               {activeTab === "login" ? (
                 <>
-                  Don't have an account?{" "}
+                  {t("Don't have an account?", language)}{" "}
                   <button 
                     className="text-primary hover:underline"
                     onClick={() => setActiveTab("register")}
                   >
-                    Sign up
+                    {t("Sign up", language)}
                   </button>
                 </>
               ) : (
                 <>
-                  Already have an account?{" "}
+                  {t("Already have an account?", language)}{" "}
                   <button 
                     className="text-primary hover:underline"
                     onClick={() => setActiveTab("login")}
                   >
-                    Log in
+                    {t("Log in", language)}
                   </button>
                 </>
               )}

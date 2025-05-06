@@ -1,7 +1,9 @@
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage, t } from "@/hooks/use-language";
 import { PixelAvatar } from "@/components/ui/pixel-avatar";
 import { Button } from "@/components/ui/button";
+import { LanguageSelector } from "@/components/ui/language-selector";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +21,7 @@ type NavbarProps = {
 
 export function Navbar({ onMenuClick }: NavbarProps) {
   const { user, logoutMutation } = useAuth();
+  const { language } = useLanguage();
   const [notifications, setNotifications] = useState<number>(0);
   const [location] = useLocation();
   
