@@ -1,6 +1,8 @@
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage, t } from "@/hooks/use-language";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { LanguageSelector } from "@/components/ui/language-selector";
 import { X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation } from "wouter";
@@ -13,6 +15,7 @@ type MobileMenuProps = {
 
 export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   const { user, logoutMutation } = useAuth();
+  const { language } = useLanguage();
   const [location] = useLocation();
   
   const handleLogout = () => {
@@ -41,14 +44,17 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="font-pixel text-lg">Menu</h2>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="btn-brutal bg-background p-1"
-                onClick={onClose}
-              >
-                <X className="h-5 w-5" />
-              </Button>
+              <div className="flex gap-2">
+                <LanguageSelector size="sm" minimal />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="btn-brutal bg-background p-1"
+                  onClick={onClose}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
             
             {user && (
@@ -64,37 +70,31 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             <div className="flex flex-col space-y-4">
               <Link href="/" onClick={onClose}>
                 <a className={`font-sans font-medium text-lg px-2 py-3 border-b-2 border-black ${location === '/' ? 'text-primary' : ''}`}>
-                  Home
+                  {t("Home", language)}
                 </a>
               </Link>
               
               <Link href="/explore" onClick={onClose}>
                 <a className={`font-sans font-medium text-lg px-2 py-3 border-b-2 border-black ${location === '/explore' ? 'text-primary' : ''}`}>
-                  Explore
+                  {t("Explore", language)}
                 </a>
               </Link>
               
               <Link href="/matches" onClick={onClose}>
                 <a className={`font-sans font-medium text-lg px-2 py-3 border-b-2 border-black ${location === '/matches' ? 'text-primary' : ''}`}>
-                  Matches
+                  {t("Matches", language)}
                 </a>
               </Link>
               
               <Link href="/chat" onClick={onClose}>
                 <a className={`font-sans font-medium text-lg px-2 py-3 border-b-2 border-black ${location.startsWith('/chat') ? 'text-primary' : ''}`}>
-                  Chat
-                </a>
-              </Link>
-              
-              <Link href="/profile" onClick={onClose}>
-                <a className={`font-sans font-medium text-lg px-2 py-3 border-b-2 border-black ${location === '/profile' ? 'text-primary' : ''}`}>
-                  Profile
+                  {t("Chat", language)}
                 </a>
               </Link>
               
               <Link href="/settings" onClick={onClose}>
                 <a className={`font-sans font-medium text-lg px-2 py-3 border-b-2 border-black ${location === '/settings' ? 'text-primary' : ''}`}>
-                  Settings
+                  {t("Settings", language)}
                 </a>
               </Link>
               
@@ -102,7 +102,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                 onClick={handleLogout}
                 className="font-sans font-medium text-lg px-2 py-3 text-secondary text-left"
               >
-                Logout
+                {t("Logout", language)}
               </button>
             </div>
           </motion.div>

@@ -54,27 +54,31 @@ export function Navbar({ onMenuClick }: NavbarProps) {
         <div className="hidden md:flex items-center space-x-6">
           <Link to="/">
             <a className={`font-sans font-semibold ${location === '/' ? 'text-primary' : 'hover:text-primary'} transition-colors`}>
-              Home
+              {t("Home", language)}
             </a>
           </Link>
           <Link to="/explore">
             <a className={`font-sans font-semibold ${location === '/explore' ? 'text-primary' : 'hover:text-primary'} transition-colors`}>
-              Explore
+              {t("Explore", language)}
             </a>
           </Link>
           <Link to="/matches">
             <a className={`font-sans font-semibold ${location === '/matches' ? 'text-primary' : 'hover:text-primary'} transition-colors`}>
-              Matches
+              {t("Matches", language)}
             </a>
           </Link>
           <Link to="/chat">
             <a className={`font-sans font-semibold ${location.startsWith('/chat') ? 'text-primary' : 'hover:text-primary'} transition-colors`}>
-              Chat
+              {t("Chat", language)}
             </a>
           </Link>
         </div>
         
         <div className="flex items-center gap-3">
+          <div className="hidden md:block">
+            <LanguageSelector size="sm" minimal />
+          </div>
+          
           <div className="relative" data-bind="notifications">
             <Button variant="ghost" size="icon" className="btn-brutal bg-background p-2 rotate-1 relative">
               <Bell className="h-5 w-5" />
@@ -96,11 +100,14 @@ export function Navbar({ onMenuClick }: NavbarProps) {
                   </div>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="card-brutal">
-                  <DropdownMenuItem>Profile</DropdownMenuItem>
-                  <DropdownMenuItem>Settings</DropdownMenuItem>
+                  <Link to="/settings">
+                    <DropdownMenuItem>
+                      {t("Settings", language)}
+                    </DropdownMenuItem>
+                  </Link>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-secondary">
-                    Logout
+                    {t("Logout", language)}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
