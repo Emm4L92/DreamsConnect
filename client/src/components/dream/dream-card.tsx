@@ -3,7 +3,18 @@ import { Dream } from "@shared/schema";
 import { PixelAvatar } from "@/components/ui/pixel-avatar";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Languages } from "lucide-react";
+import { 
+  Heart, 
+  MessageCircle, 
+  Languages, 
+  Eye, 
+  MoreHorizontal, 
+  Edit,
+  Trash2,
+  Globe,
+  Lock,
+  Share2 
+} from "lucide-react";
 import { useLikeDream, useUnlikeDream, useCreateComment, useTranslateDream } from "@/hooks/use-dreams";
 import {
   Dialog,
@@ -13,23 +24,33 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { 
+  DropdownMenu,
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Link, useLocation } from "wouter";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage, t } from "@/hooks/use-language";
+import { Badge } from "@/components/ui/badge";
 
 interface DreamCardProps {
   dream: Dream;
   className?: string;
+  showManage?: boolean;
 }
 
 const commentSchema = z.object({
   content: z.string().min(1, "Comment cannot be empty").max(500, "Comment is too long")
 });
 
-export function DreamCard({ dream, className = "" }: DreamCardProps) {
+export function DreamCard({ dream, className = "", showManage = false }: DreamCardProps) {
   const { user } = useAuth();
   const [isLiked, setIsLiked] = useState(dream?.isLikedByUser || false);
   const [likeCount, setLikeCount] = useState(dream?.likeCount || 0);
