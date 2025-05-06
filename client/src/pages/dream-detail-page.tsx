@@ -75,7 +75,7 @@ export default function DreamDetailPage() {
     if (dream) {
       translationMutation.mutate({
         dreamId: dream.id,
-        targetLanguage: language
+        targetLang: language
       });
     }
   };

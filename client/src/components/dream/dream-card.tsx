@@ -15,7 +15,7 @@ import {
   Lock,
   Share2 
 } from "lucide-react";
-import { useLikeDream, useUnlikeDream, useCreateComment, useTranslateDream } from "@/hooks/use-dreams";
+import { useLikeDream, useUnlikeDream, useCreateComment, useTranslateDream, useDeleteDream } from "@/hooks/use-dreams";
 import {
   Dialog,
   DialogContent,
@@ -52,17 +52,21 @@ const commentSchema = z.object({
 
 export function DreamCard({ dream, className = "", showManage = false }: DreamCardProps) {
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const [, setLocation] = useLocation();
   const [isLiked, setIsLiked] = useState(dream?.isLikedByUser || false);
   const [likeCount, setLikeCount] = useState(dream?.likeCount || 0);
   const [commentCount, setCommentCount] = useState(dream?.commentCount || 0);
   const [isCommenting, setIsCommenting] = useState(false);
   const [isTranslated, setIsTranslated] = useState(false);
   const [translatedContent, setTranslatedContent] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const likeMutation = useLikeDream();
   const unlikeMutation = useUnlikeDream();
   const commentMutation = useCreateComment();
   const translateMutation = useTranslateDream();
+  const deleteMutation = useDeleteDream();
   
   const form = useForm<z.infer<typeof commentSchema>>({
     resolver: zodResolver(commentSchema),
@@ -140,13 +144,70 @@ export function DreamCard({ dream, className = "", showManage = false }: DreamCa
               </p>
             </div>
           </div>
+          
+          <div className="flex items-center gap-2">
+            {/* Visibility badge */}
+            {dream.visibility && (
+              <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 font-medium border-2 border-black">
+                {dream.visibility === 'public' ? (
+                  <Globe className="h-3 w-3 mr-1" />
+                ) : (
+                  <Lock className="h-3 w-3 mr-1" />
+                )}
+                {t(dream.visibility === 'public' ? "Public" : "Private", language)}
+              </Badge>
+            )}
+            
+            {/* Management dropdown */}
+            {showManage && user?.id === dream.author?.id && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="border-2 border-black">
+                  <DropdownMenuItem 
+                    className="cursor-pointer font-semibold"
+                    onClick={() => setLocation(`/dreams/${dream.id}`)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    {t("View", language)}
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem 
+                    className="cursor-pointer font-semibold"
+                    onClick={() => setLocation(`/dreams/edit/${dream.id}`)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    {t("Edit", language)}
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem 
+                    className="cursor-pointer font-semibold text-destructive"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {t("Delete", language)}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
       </CardHeader>
       
       <CardContent className="p-0 pb-4">
-        <h3 className="font-pixel text-lg mb-3">{dream?.title || "Untitled Dream"}</h3>
+        <h3 className="font-pixel text-lg mb-3">
+          <Link 
+            href={`/dreams/${dream.id}`} 
+            className="hover:text-primary transition-colors"
+          >
+            {dream?.title || "Untitled Dream"}
+          </Link>
+        </h3>
         
-        <p className="mb-4">
+        <p className="mb-4 line-clamp-4">
           {isTranslated ? translatedContent : dream?.content || "No content available"}
         </p>
         
@@ -247,6 +308,47 @@ export function DreamCard({ dream, className = "", showManage = false }: DreamCa
           <span>{isTranslated ? "Original" : "Translate"}</span>
         </Button>
       </CardFooter>
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && (
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="border-2 border-black">
+            <DialogHeader>
+              <DialogTitle className="font-pixel text-lg text-destructive">
+                {t("Delete Dream", language)}
+              </DialogTitle>
+              <DialogDescription>
+                {t("Are you sure you want to delete this dream? This action cannot be undone.", language)}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-2 pt-4 pb-2">
+              <h3 className="font-medium">{dream.title}</h3>
+              <p className="text-sm text-muted-foreground line-clamp-2">{dream.content}</p>
+            </div>
+            
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(false)}
+                className="font-display"
+              >
+                {t("Cancel", language)}
+              </Button>
+              <Button
+                variant="destructive"
+                className="font-display"
+                // This would be connected to a delete mutation
+                onClick={() => {
+                  // TODO: Implement dream deletion functionality
+                  setShowDeleteDialog(false);
+                }}
+              >
+                {t("Delete", language)}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Card>
   );
 }

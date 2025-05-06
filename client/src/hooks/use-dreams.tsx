@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dream, InsertDream, DreamComment, InsertDreamComment } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 export function useDreams(params?: { language?: string; tag?: string }) {
   const queryParams = new URLSearchParams();
@@ -129,6 +130,35 @@ export function useTranslateDream() {
     onError: (error: Error) => {
       toast({
         title: "Translation failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useDeleteDream() {
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  
+  return useMutation({
+    mutationFn: async (dreamId: number) => {
+      const res = await apiRequest("DELETE", `/api/dreams/${dreamId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/dreams'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({
+        title: "Dream deleted",
+        description: "Your dream has been deleted successfully",
+      });
+      // Redirect to the dreams page
+      setLocation("/my-dreams");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete dream",
         description: error.message,
         variant: "destructive",
       });
