@@ -31,9 +31,9 @@ const commentSchema = z.object({
 
 export function DreamCard({ dream, className = "" }: DreamCardProps) {
   const { user } = useAuth();
-  const [isLiked, setIsLiked] = useState(dream.isLikedByUser);
-  const [likeCount, setLikeCount] = useState(dream.likeCount);
-  const [commentCount, setCommentCount] = useState(dream.commentCount);
+  const [isLiked, setIsLiked] = useState(dream?.isLikedByUser || false);
+  const [likeCount, setLikeCount] = useState(dream?.likeCount || 0);
+  const [commentCount, setCommentCount] = useState(dream?.commentCount || 0);
   const [isCommenting, setIsCommenting] = useState(false);
   const [isTranslated, setIsTranslated] = useState(false);
   const [translatedContent, setTranslatedContent] = useState("");
@@ -51,6 +51,8 @@ export function DreamCard({ dream, className = "" }: DreamCardProps) {
   });
   
   const handleLikeToggle = () => {
+    if (!dream?.id) return;
+    
     if (isLiked) {
       setIsLiked(false);
       setLikeCount(prev => prev - 1);
@@ -63,6 +65,8 @@ export function DreamCard({ dream, className = "" }: DreamCardProps) {
   };
   
   const handleCommentSubmit = (values: z.infer<typeof commentSchema>) => {
+    if (!dream?.id) return;
+    
     commentMutation.mutate(
       { dreamId: dream.id, content: values.content },
       {
@@ -76,6 +80,8 @@ export function DreamCard({ dream, className = "" }: DreamCardProps) {
   };
   
   const handleTranslate = () => {
+    if (!dream?.id) return;
+    
     if (isTranslated) {
       setIsTranslated(false);
       return;
@@ -92,24 +98,24 @@ export function DreamCard({ dream, className = "" }: DreamCardProps) {
     );
   };
   
-  const rotationClass = dream.id % 2 === 0 ? "rotate-1" : "rotate-neg-1";
+  const rotationClass = (dream?.id || 0) % 2 === 0 ? "rotate-1" : "rotate-neg-1";
   
   return (
     <Card className={`card-brutal bg-white p-5 ${rotationClass} ${className}`}>
       <CardHeader className="p-0 pb-4">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
-            <PixelAvatar id={dream.author.id % 6} />
+            <PixelAvatar id={(dream.author?.id || 0) % 6} />
             <div>
-              <h3 className="font-semibold">{dream.author.username}</h3>
+              <h3 className="font-semibold">{dream.author?.username || "Anonymous"}</h3>
               <p className="text-xs text-gray-600">
-                {new Date(dream.createdAt).toLocaleString(undefined, {
+                {dream.createdAt ? new Date(dream.createdAt).toLocaleString(undefined, {
                   year: 'numeric',
                   month: 'short',
                   day: 'numeric',
                   hour: '2-digit',
                   minute: '2-digit'
-                })}
+                }) : "Unknown date"}
               </p>
             </div>
           </div>
@@ -117,22 +123,22 @@ export function DreamCard({ dream, className = "" }: DreamCardProps) {
       </CardHeader>
       
       <CardContent className="p-0 pb-4">
-        <h3 className="font-pixel text-lg mb-3">{dream.title}</h3>
+        <h3 className="font-pixel text-lg mb-3">{dream?.title || "Untitled Dream"}</h3>
         
         <p className="mb-4">
-          {isTranslated ? translatedContent : dream.content}
+          {isTranslated ? translatedContent : dream?.content || "No content available"}
         </p>
         
-        {dream.imageUrl && (
+        {dream?.imageUrl && (
           <img 
             src={dream.imageUrl} 
-            alt={dream.title}
+            alt={dream?.title || "Dream image"}
             className="w-full h-auto mb-4 border-2 border-black"
           />
         )}
         
         {/* Tags */}
-        {dream.tags && dream.tags.length > 0 && (
+        {dream?.tags && dream.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {dream.tags.map((tag, index) => {
               const bgColors = ["bg-accent", "bg-primary text-white", "bg-secondary text-white"];
