@@ -40,6 +40,11 @@ export function NotificationPanel({
     // ma visto che è simulato, ritorniamo direttamente i dati
     queryFn: () => {
       // Dati di esempio in attesa di un vero endpoint
+      // Creiamo alcune notifiche di test con date valide
+      const now = new Date();
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+      
       return [
         {
           id: 1,
@@ -48,7 +53,7 @@ export function NotificationPanel({
           username: "utente1",
           dreamId: 34,
           dreamTitle: "Esplorazione spaziale",
-          createdAt: new Date().toISOString(),
+          createdAt: fiveMinutesAgo.toISOString(),
           read: false,
         },
         {
@@ -59,7 +64,7 @@ export function NotificationPanel({
           dreamId: 34,
           dreamTitle: "Esplorazione spaziale",
           content: "Che sogno affascinante! L'ho avuto anche io.",
-          createdAt: new Date().toISOString(),
+          createdAt: oneHourAgo.toISOString(),
           read: false,
         },
         {
@@ -69,7 +74,7 @@ export function NotificationPanel({
           username: "testuser",
           chatId: 1,
           content: "Ciao, ho visto che abbiamo avuto un sogno simile!",
-          createdAt: new Date().toISOString(),
+          createdAt: now.toISOString(),
           read: true,
         },
       ];

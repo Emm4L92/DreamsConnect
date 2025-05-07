@@ -7,33 +7,48 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Format a date string into a human-readable format
+ * Handles invalid dates and undefined values safely
  */
-export function formatDate(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+export function formatDate(date: string | Date | undefined | null): string {
+  if (!date) return "unknown date";
   
-  // Return a "time ago" format for recent dates, otherwise a standard date format
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHours = Math.floor(diffMin / 60);
-  const diffDays = Math.floor(diffHours / 24);
+  let d: Date;
   
-  if (diffSec < 60) {
-    return "just now";
-  } else if (diffMin < 60) {
-    return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
-  } else if (diffHours < 24) {
-    return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  } else if (diffDays < 7) {
-    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  } else {
-    // Format as "Jan 1, 2023"
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+  try {
+    d = typeof date === 'string' ? new Date(date) : date;
+    
+    // Check if date is valid
+    if (isNaN(d.getTime())) {
+      return "invalid date";
+    }
+    
+    // Return a "time ago" format for recent dates, otherwise a standard date format
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHours = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffSec < 60) {
+      return "just now";
+    } else if (diffMin < 60) {
+      return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    } else if (diffDays < 7) {
+      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } else {
+      // Format as "Jan 1, 2023"
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "date error";
   }
 }
 
