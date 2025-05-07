@@ -1,156 +1,121 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useUserDreams } from "@/hooks/use-dreams";
-import { useLanguage } from "@/hooks/use-language";
-import { Navbar } from "@/components/layout/navbar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUserDreams, useDeleteDream } from "@/hooks/use-dreams";
+import { useLanguage, t } from "@/hooks/use-language";
 import { DreamCard } from "@/components/dream/dream-card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus } from "lucide-react";
-import { useState } from "react";
-import { CreateDreamForm } from "@/components/dream/create-dream-form";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog";
-import { t } from "@/hooks/use-language";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { PlusCircle, Info, Loader2 } from "lucide-react";
+import { Link, useLocation } from "wouter";
 
 export default function MyDreamsPage() {
   const { user } = useAuth();
   const { language } = useLanguage();
-  const { dreams, isLoading } = useUserDreams(user?.id as number);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [, setLocation] = useLocation();
+  const [showEmpty, setShowEmpty] = useState(false);
+  const deleteMutation = useDeleteDream();
   
-  if (!user) return null;
+  const { 
+    data: dreams, 
+    isLoading, 
+    isError, 
+    error,
+  } = useUserDreams(user?.id || 0);
   
-  const publicDreams = dreams?.filter(dream => dream.visibility === "public") || [];
-  const privateDreams = dreams?.filter(dream => dream.visibility === "private") || [];
+  const handleCreateDream = () => {
+    setLocation("/dreams/create");
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen py-12">
+        <div className="max-w-5xl mx-auto px-4">
+          <h1 className="font-pixel text-3xl mb-8">{t("My Dreams", language)}</h1>
+          <div className="flex items-center justify-center min-h-[300px]">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isError) {
+    return (
+      <div className="min-h-screen py-12">
+        <div className="max-w-5xl mx-auto px-4">
+          <h1 className="font-pixel text-3xl mb-8">{t("My Dreams", language)}</h1>
+          <div className="bg-red-50 border-2 border-red-200 rounded-md p-4">
+            <p className="text-red-600">{error?.message || t("Failed to load dreams", language)}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar onMenuClick={() => {}} />
-      
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-display font-bold">{t("My Dreams", language)}</h1>
-          
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button className="font-display">
-                <Plus className="mr-2 h-4 w-4" />
-                {t("New Dream", language)}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle className="font-display text-xl">
-                  {t("Share a new dream", language)}
-                </DialogTitle>
-              </DialogHeader>
-              <CreateDreamForm onSuccess={() => setIsCreateOpen(false)} />
-            </DialogContent>
-          </Dialog>
+    <div className="min-h-screen py-12">
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="font-pixel text-3xl">{t("My Dreams", language)}</h1>
+          <Button 
+            className="btn-brutal bg-primary text-white"
+            onClick={handleCreateDream}
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            {t("Create Dream", language)}
+          </Button>
         </div>
         
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="all">{t("All", language)}</TabsTrigger>
-            <TabsTrigger value="public">{t("Public", language)}</TabsTrigger>
-            <TabsTrigger value="private">{t("Private", language)}</TabsTrigger>
-          </TabsList>
+        {dreams && dreams.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {dreams.map(dream => (
+              <DreamCard 
+                key={dream.id} 
+                dream={dream} 
+                showManage={true} 
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-accent/30 border-2 border-dashed border-accent rounded-md p-8 text-center">
+            <Info className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="font-pixel text-xl mb-2">{t("No Dreams Yet", language)}</h3>
+            <p className="mb-6 text-muted-foreground">
+              {t("Start sharing your dream experiences and connect with others.", language)}
+            </p>
+            <Button 
+              className="btn-brutal bg-primary text-white"
+              onClick={handleCreateDream}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />
+              {t("Create Your First Dream", language)}
+            </Button>
+          </div>
+        )}
+      </div>
+      
+      <Dialog open={showEmpty} onOpenChange={setShowEmpty}>
+        <DialogContent className="border-2 border-black">
+          <DialogHeader>
+            <DialogTitle className="font-pixel">{t("Create Your First Dream", language)}</DialogTitle>
+            <DialogDescription>
+              {t("Share your dream experiences with the world and find others with similar experiences.", language)}
+            </DialogDescription>
+          </DialogHeader>
           
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="space-y-4">
+            <p>{t("Your dreams help others connect with you through shared experiences.", language)}</p>
+            <div className="flex justify-end">
+              <Button 
+                className="btn-brutal bg-primary text-white"
+                onClick={handleCreateDream}
+              >
+                {t("Create Dream", language)}
+              </Button>
             </div>
-          ) : (
-            <>
-              <TabsContent value="all" className="space-y-4">
-                {dreams?.length === 0 ? (
-                  <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
-                    <p className="text-lg text-muted-foreground">
-                      {t("You haven't shared any dreams yet.", language)}
-                    </p>
-                    <Button 
-                      variant="secondary" 
-                      className="mt-4 font-display"
-                      onClick={() => setIsCreateOpen(true)}
-                    >
-                      {t("Create your first dream", language)}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {dreams?.map(dream => (
-                      <DreamCard 
-                        key={dream.id} 
-                        dream={dream}
-                        showManage={true} 
-                      />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="public" className="space-y-4">
-                {publicDreams.length === 0 ? (
-                  <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
-                    <p className="text-lg text-muted-foreground">
-                      {t("You don't have any public dreams yet.", language)}
-                    </p>
-                    <Button 
-                      variant="secondary" 
-                      className="mt-4 font-display"
-                      onClick={() => setIsCreateOpen(true)}
-                    >
-                      {t("Share a public dream", language)}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {publicDreams.map(dream => (
-                      <DreamCard 
-                        key={dream.id} 
-                        dream={dream}
-                        showManage={true} 
-                      />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="private" className="space-y-4">
-                {privateDreams.length === 0 ? (
-                  <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
-                    <p className="text-lg text-muted-foreground">
-                      {t("You don't have any private dreams yet.", language)}
-                    </p>
-                    <Button 
-                      variant="secondary" 
-                      className="mt-4 font-display"
-                      onClick={() => setIsCreateOpen(true)}
-                    >
-                      {t("Create a private dream", language)}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {privateDreams.map(dream => (
-                      <DreamCard 
-                        key={dream.id} 
-                        dream={dream}
-                        showManage={true} 
-                      />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            </>
-          )}
-        </Tabs>
-      </main>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

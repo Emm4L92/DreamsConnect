@@ -57,6 +57,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Fetch author information for all dreams
+      const authorIds = [...dreamMap.values()].map(dream => dream.authorId);
+      if (authorIds.length > 0) {
+        const authors = await storage.db
+          .select({ id: users.id, username: users.username })
+          .from(users)
+          .where(sql`${users.id} IN (${authorIds.join(',')})`);
+        
+        const authorsMap = new Map(authors.map(author => [author.id, author]));
+        
+        for (const dream of dreamMap.values()) {
+          const author = authorsMap.get(dream.authorId);
+          if (author) {
+            dream.author = {
+              id: author.id,
+              username: author.username
+            };
+          }
+        }
+      }
+      
       // Get like counts
       const likeCounts = await storage.db
         .select({ dreamId: dreamLikes.dreamId, count: sql<number>`count(*)` })
@@ -158,12 +179,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You don't have permission to view this dream" });
       }
       
-      // Get comments
-      const comments = await storage.db
+      // Get tags
+      const tagsResult = await storage.db
         .select()
+        .from(dreamTags)
+        .where(eq(dreamTags.dreamId, dreamId));
+      
+      const tags = tagsResult.map(t => t.tag);
+      
+      // Get author info
+      const authorResult = await storage.db
+        .select({ id: users.id, username: users.username })
+        .from(users)
+        .where(eq(users.id, dream.authorId))
+        .limit(1);
+      
+      const author = authorResult.length > 0 ? {
+        id: authorResult[0].id,
+        username: authorResult[0].username
+      } : null;
+      
+      // Get comments
+      const commentsResult = await storage.db
+        .select({
+          comment: dreamComments,
+          user: { id: users.id, username: users.username }
+        })
         .from(dreamComments)
+        .innerJoin(users, eq(dreamComments.userId, users.id))
         .where(eq(dreamComments.dreamId, dreamId))
         .orderBy(dreamComments.createdAt);
+      
+      const comments = commentsResult.map(row => ({
+        ...row.comment,
+        user: row.user
+      }));
+      
+      // Get like count
+      const likeCountResult = await storage.db
+        .select({ count: sql<number>`count(*)` })
+        .from(dreamLikes)
+        .where(eq(dreamLikes.dreamId, dreamId));
+      
+      const likeCount = likeCountResult[0]?.count || 0;
       
       // Check if the user has liked this dream
       let isLikedByUser = false;
@@ -180,7 +238,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         ...dream,
+        tags,
+        author,
         comments,
+        likeCount,
+        commentCount: comments.length,
         isLikedByUser
       });
     } catch (error) {
@@ -297,6 +359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = parseInt(req.params.id);
       
       let query = storage.db.select().from(dreams)
+        .leftJoin(dreamTags, eq(dreams.id, dreamTags.dreamId))
         .where(eq(dreams.authorId, userId));
       
       // If not the authenticated user, only show public dreams
@@ -304,8 +367,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
         query = query.where(eq(dreams.visibility, "public"));
       }
       
-      const userDreams = await query.orderBy(desc(dreams.createdAt));
+      const result = await query.orderBy(desc(dreams.createdAt));
       
+      // Group by dream ID to handle multiple tags per dream
+      const dreamMap = new Map();
+      
+      for (const row of result) {
+        const dream = row.dreams;
+        if (!dreamMap.has(dream.id)) {
+          dreamMap.set(dream.id, {
+            ...dream,
+            tags: row.dream_tags ? [row.dream_tags.tag] : [],
+            isLikedByUser: false,
+            likeCount: 0,
+            commentCount: 0
+          });
+        } else if (row.dream_tags) {
+          dreamMap.get(dream.id).tags.push(row.dream_tags.tag);
+        }
+      }
+      
+      // Get author information
+      if (dreamMap.size > 0) {
+        const author = await storage.db
+          .select({ id: users.id, username: users.username })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+          
+        if (author.length > 0) {
+          for (const dream of dreamMap.values()) {
+            dream.author = {
+              id: author[0].id,
+              username: author[0].username
+            };
+          }
+        }
+      }
+      
+      // Get like counts
+      const likeCounts = await storage.db
+        .select({ dreamId: dreamLikes.dreamId, count: sql<number>`count(*)` })
+        .from(dreamLikes)
+        .where(sql`${dreamLikes.dreamId} IN (${[...dreamMap.keys()].join(',')})`)
+        .groupBy(dreamLikes.dreamId);
+      
+      for (const count of likeCounts) {
+        if (dreamMap.has(count.dreamId)) {
+          dreamMap.get(count.dreamId).likeCount = count.count;
+        }
+      }
+      
+      // Get comment counts
+      const commentCounts = await storage.db
+        .select({ dreamId: dreamComments.dreamId, count: sql<number>`count(*)` })
+        .from(dreamComments)
+        .where(sql`${dreamComments.dreamId} IN (${[...dreamMap.keys()].join(',')})`)
+        .groupBy(dreamComments.dreamId);
+      
+      for (const count of commentCounts) {
+        if (dreamMap.has(count.dreamId)) {
+          dreamMap.get(count.dreamId).commentCount = count.count;
+        }
+      }
+      
+      // Check if the current user has liked each dream
+      if (req.isAuthenticated()) {
+        const currentUserId = req.user.id;
+        const userLikes = await storage.db
+          .select()
+          .from(dreamLikes)
+          .where(and(
+            eq(dreamLikes.userId, currentUserId),
+            sql`${dreamLikes.dreamId} IN (${[...dreamMap.keys()].join(',')})`
+          ));
+        
+        for (const like of userLikes) {
+          if (dreamMap.has(like.dreamId)) {
+            dreamMap.get(like.dreamId).isLikedByUser = true;
+          }
+        }
+      }
+      
+      const userDreams = Array.from(dreamMap.values());
       res.json(userDreams);
     } catch (error) {
       next(error);
