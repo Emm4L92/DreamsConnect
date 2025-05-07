@@ -548,6 +548,20 @@ export async function generateTags(content: string, language: string): Promise<s
         delete tagScores[tag];
         continue;
       }
+      
+      // Caso 3: Frasi preposizionali specifiche
+      if (/\b(walking through|through forest|all around|around me|watch by|watched by|being watched|seemed like|looked like)\b/i.test(tag)) {
+        tagCandidates.delete(tag);
+        delete tagScores[tag];
+        continue;
+      }
+      
+      // Caso 4: Termini generici come "something", "anything", ecc.
+      if (/\b(something|anything|nothing|everything|someone|anyone|everyone|nobody)\b/i.test(tag)) {
+        tagCandidates.delete(tag);
+        delete tagScores[tag];
+        continue;
+      }
     }
   } catch (error) {
     console.error('Phrase filtering error:', error);
@@ -592,12 +606,39 @@ export async function generateTags(content: string, language: string): Promise<s
     return true;
   });
   
+  // Filtra esplicitamente le frasi problematiche una seconda volta con pattern matching più aggressivo
+  finalTags = finalTags.filter(tag => {
+    // Rimuovi qualsiasi tag con pattern verbali specifici utilizzando una regex più specifica
+    // Questo pattern cattura esplicitamente "could hear", "felt like", ecc.
+    if (/\b(could hear|felt like|was being|were tall|seemed to|try to|going to|wanted to|began to)\b/i.test(tag)) {
+      return false;
+    }
+    
+    // Non vogliamo "qualcosa" come tag - troppo generico
+    if (/\b(something|anything|nothing|everything|someone|anyone|everyone|nobody)\b/i.test(tag)) {
+      return false;
+    }
+    
+    // Pattern per frammenti di frasi preposizionali
+    if (/\b(walking through|through forest|all around|around me|watch by|watched by|being watched|seemed like|looked like)\b/i.test(tag)) {
+      return false;
+    }
+    
+    // Pattern per frasi con struttura "verbo + preposizione"
+    if (/\b(walk(ing|ed)? (through|in|by|to)|look(ing|ed)? (at|like|as)|seem(ing|ed)? (to|like|as))\b/i.test(tag)) {
+      return false;
+    }
+    
+    return true;
+  });
+  
   // Se non abbiamo trovato tag, restituisci quelli generici
   if (finalTags.length === 0) {
     return getGenericTags(langCode);
   }
   
-  return finalTags;
+  // Assicurati di selezionare solo fino a 5 tag
+  return finalTags.slice(0, 5);
 }
 
 /**
