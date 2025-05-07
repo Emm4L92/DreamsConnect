@@ -526,21 +526,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const userId = req.user.id;
       
-      const matchesResult = await storage.db
-        .select({
-          id: dreamMatches.id,
-          dreamId: dreamMatches.dreamId,
-          matchedDreamId: dreamMatches.matchedDreamId,
-          score: dreamMatches.score,
-          createdAt: dreamMatches.createdAt
-        })
-        .from(dreamMatches)
-        .innerJoin(dreams, eq(dreamMatches.dreamId, dreams.id))
-        .innerJoin(dreams, eq(dreamMatches.matchedDreamId, dreams.id))
+      // Otteniamo i sogni dell'utente corrente
+      const userDreamsResult = await storage.db
+        .select()
+        .from(dreams)
         .where(eq(dreams.authorId, userId));
       
+      const userDreamIds = userDreamsResult.map(dream => dream.id);
+      
+      // Se l'utente non ha sogni, restituiamo un array vuoto
+      if (userDreamIds.length === 0) {
+        return res.json({ matches: [] });
+      }
+      
+      // Ora otteniamo i match per i sogni dell'utente
+      const userMatches = await storage.db
+        .select()
+        .from(dreamMatches)
+        .where(
+          userDreamIds.length === 1
+            ? eq(dreamMatches.dreamId, userDreamIds[0])
+            : sql`${dreamMatches.dreamId} IN (${sql.join(userDreamIds)})`
+        );
+      
       // Get user info and dream info for each match
-      const matches = await Promise.all(matchesResult.map(async (match) => {
+      const matches = await Promise.all(userMatches.map(async (match) => {
         const matchedDream = await storage.getDreamById(match.matchedDreamId);
         const matchedUser = await storage.getUser(matchedDream.authorId);
         
