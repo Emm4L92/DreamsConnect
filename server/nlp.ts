@@ -520,14 +520,33 @@ export async function generateTags(content: string, language: string): Promise<s
         continue;
       }
       
-      // Se contiene congiunzioni o preposizioni comuni, probabilmente è una frase, rimuovilo
+      // Se contiene congiunzioni, preposizioni o articoli comuni, probabilmente è una frase
       if (/\b(and|or|but|the|a|an|il|lo|la|gli|le|e|o|ma|un|una|di|da|in|con|su|per|tra|fra)\b/i.test(tag)) {
         // Ma solo se sono singole parole, non parte di parole più grandi
         const words = tag.split(/\s+/);
         if (words.length > 1) {
           tagCandidates.delete(tag);
           delete tagScores[tag];
+          continue;
         }
+      }
+      
+      // Se è un frammento di frase con verbi e ausiliari
+      // Caso 1: inizia con un ausiliare o verbo comune
+      if (/^(could|would|should|can|may|might|must|is|was|were|had|have|has|will|shall|am|are|be|been|being|do|does|did|go|goes|went|come|came|get|gets|got|make|makes|made|take|takes|took|see|sees|saw|say|says|said|felt|feel|feels|heard|hear|hears|went|going|find|found|falls|falling|look|looked|seems|seemed|grow|grew|think|thought|want|wanted)\b/i.test(tag)) {
+        // Se è una coppia di parole, rimuovila
+        if (tag.includes(' ')) {
+          tagCandidates.delete(tag);
+          delete tagScores[tag];
+          continue;
+        }
+      }
+      
+      // Caso 2: contiene questi ausiliari o verbi in qualsiasi posizione
+      if (tag.includes(' ') && /\b(could|would|should|was|were|had|have|has|felt|feel|seems|seemed|heard|hear|went|going|found|thought|appeared|looked)\b/i.test(tag)) {
+        tagCandidates.delete(tag);
+        delete tagScores[tag];
+        continue;
       }
     }
   } catch (error) {
@@ -552,6 +571,7 @@ export async function generateTags(content: string, language: string): Promise<s
   // 1. Rimuovi tag con meno di 3 caratteri
   // 2. Rimuovi tag più lunghi di MAX_TAG_LENGTH caratteri
   // 3. Rimuovi tag che contengono più di 2 spazi (frasi lunghe)
+  // 4. Rimuovi tag che corrispondono a modelli di frasi verbali comuni
   finalTags = finalTags.filter(tag => {
     // Tag troppo corti
     if (tag.length < 3) return false;
@@ -562,6 +582,12 @@ export async function generateTags(content: string, language: string): Promise<s
     // Frasi troppo lunghe (contengono più di 2 parole)
     const wordCount = tag.split(/\s+/).length;
     if (wordCount > 2) return false;
+    
+    // Esplicitamente rimuovi i common verbal phrases pattern
+    // Questo è un filtro di sicurezza che si applica all'ultimo stadio
+    if (/\b(could|would|felt|feel|seems|seemed|heard|hear|went|going|found|thought|appeared|looked)\b/i.test(tag)) {
+      return false;
+    }
     
     return true;
   });
