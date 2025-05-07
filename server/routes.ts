@@ -812,10 +812,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const match of potentialMatches) {
         // Crea record di match
         try {
+          // Converte score in intero
+          const intScore = Math.round(match.score);
+          
           await storage.db.insert(dreamMatches).values({
             dreamId,
             matchedDreamId: match.dreamId,
-            score: match.score,
+            score: intScore,
             createdAt: new Date()
           }).onConflictDoNothing();
           
@@ -823,11 +826,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.db.insert(dreamMatches).values({
             dreamId: match.dreamId,
             matchedDreamId: dreamId,
-            score: match.score,
+            score: intScore,
             createdAt: new Date()
           }).onConflictDoNothing();
           
-          console.log(`[Match] Created match between dreams ${dreamId} and ${match.dreamId} with score ${match.score}`);
+          console.log(`[Match] Created match between dreams ${dreamId} and ${match.dreamId} with score ${intScore}`);
         } catch (err) {
           console.error(`[Match] Error creating match record:`, err);
         }
