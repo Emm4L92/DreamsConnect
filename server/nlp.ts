@@ -1,461 +1,63 @@
-// Multi-language NLP for generating tags from dream descriptions
-// In a production environment, this could be replaced with more sophisticated NLP libraries
-// or API calls to services like OpenAI
+import natural from 'natural';
+import compromise from 'compromise';
+import keywordExtractor from 'keyword-extractor';
 
 /**
- * A set of predefined categories and their related keywords in different languages
+ * Avanzato modulo NLP per generare tag dai contenuti dei sogni
+ * Utilizza tecniche di elaborazione del linguaggio naturale per estrarre automaticamente tag significativi
+ * Nessun dizionario predefinito di parole chiave, ma algoritmi automatici di estrazione
  */
-interface LanguageKeywords {
-  [key: string]: string[];
-}
 
-interface TagCategories {
-  [key: string]: LanguageKeywords;
-}
+// Inizializziamo i tokenizer per diverse lingue
+const tokenizer = new natural.WordTokenizer();
+const stemmer = natural.PorterStemmer;
 
-const tagCategories: TagCategories = {
-  places: {
-    en: [
-      'house', 'home', 'building', 'city', 'mountain', 'mountains', 'ocean', 'sea', 
-      'beach', 'forest', 'woods', 'jungle', 'desert', 'river', 'lake', 'island', 
-      'cave', 'castle', 'school', 'office', 'hospital', 'church', 'park', 'garden',
-      'sky', 'space', 'underwater', 'subway', 'train', 'airplane', 'car', 'road', 'street',
-      'spaceship', 'spacecraft', 'ufo', 'mars', 'moon', 'planet', 'galaxy', 'universe',
-      'rocket', 'shuttle', 'station', 'satellite'
-    ],
-    it: [
-      'casa', 'edificio', 'città', 'montagna', 'montagne', 'oceano', 'mare', 
-      'spiaggia', 'foresta', 'bosco', 'giungla', 'deserto', 'fiume', 'lago', 'isola', 
-      'grotta', 'castello', 'scuola', 'ufficio', 'ospedale', 'chiesa', 'parco', 'giardino',
-      'cielo', 'spazio', 'sottomarino', 'metropolitana', 'treno', 'aereo', 'auto', 'strada', 'via',
-      'astronave', 'navicella', 'astronavi', 'ufo', 'marte', 'luna', 'pianeta', 'galassia', 'universo',
-      'razzo', 'navetta', 'stazione', 'satellite'
-    ],
-    es: [
-      'casa', 'edificio', 'ciudad', 'montaña', 'montañas', 'océano', 'mar', 
-      'playa', 'bosque', 'selva', 'desierto', 'río', 'lago', 'isla', 
-      'cueva', 'castillo', 'escuela', 'oficina', 'hospital', 'iglesia', 'parque', 'jardín',
-      'cielo', 'espacio', 'submarino', 'metro', 'tren', 'avión', 'coche', 'carretera', 'calle',
-      'nave espacial', 'ovni', 'marte', 'luna', 'planeta', 'galaxia', 'universo',
-      'cohete', 'estación', 'satélite'
-    ],
-    fr: [
-      'maison', 'bâtiment', 'ville', 'montagne', 'montagnes', 'océan', 'mer', 
-      'plage', 'forêt', 'bois', 'jungle', 'désert', 'rivière', 'lac', 'île', 
-      'grotte', 'château', 'école', 'bureau', 'hôpital', 'église', 'parc', 'jardin',
-      'ciel', 'espace', 'sous-marin', 'métro', 'train', 'avion', 'voiture', 'route', 'rue',
-      'vaisseau spatial', 'ovni', 'mars', 'lune', 'planète', 'galaxie', 'univers',
-      'fusée', 'navette', 'station', 'satellite'
-    ],
-    de: [
-      'haus', 'gebäude', 'stadt', 'berg', 'berge', 'ozean', 'meer', 
-      'strand', 'wald', 'dschungel', 'wüste', 'fluss', 'see', 'insel', 
-      'höhle', 'schloss', 'schule', 'büro', 'krankenhaus', 'kirche', 'park', 'garten',
-      'himmel', 'weltraum', 'unterwasser', 'u-bahn', 'zug', 'flugzeug', 'auto', 'straße', 'weg',
-      'raumschiff', 'ufo', 'mars', 'mond', 'planet', 'galaxie', 'universum',
-      'rakete', 'shuttle', 'station', 'satellit'
-    ]
-  },
-  actions: {
-    en: [
-      'flying', 'falling', 'running', 'swimming', 'walking', 'jumping', 'climbing',
-      'fighting', 'hiding', 'escaping', 'chasing', 'searching', 'finding', 'losing',
-      'talking', 'singing', 'dancing', 'eating', 'drinking', 'sleeping', 'waking',
-      'traveling', 'driving', 'riding', 'sailing', 'diving', 'floating', 'exploring',
-      'spaceflight', 'journeying', 'teleporting', 'landing', 'launching', 'hovering', 'floating'
-    ],
-    it: [
-      'volare', 'volavo', 'volando', 'cadere', 'correre', 'nuotare', 'camminare', 
-      'saltare', 'arrampicare', 'combattere', 'nascondere', 'fuggire', 'inseguire', 
-      'cercare', 'trovare', 'perdere', 'parlare', 'cantare', 'ballare', 'mangiare', 
-      'bere', 'dormire', 'svegliare', 'viaggiare', 'viaggiando', 'guidare', 'cavalcare', 
-      'navigare', 'tuffare', 'galleggiare', 'esplorare', 'esplorando', 'astronavigare', 
-      'teletrasportare', 'atterrare', 'lanciare', 'sospendere', 'fluttuare', 'andare'
-    ],
-    es: [
-      'volar', 'caer', 'correr', 'nadar', 'caminar', 'saltar', 'escalar',
-      'luchar', 'esconder', 'escapar', 'perseguir', 'buscar', 'encontrar', 'perder',
-      'hablar', 'cantar', 'bailar', 'comer', 'beber', 'dormir', 'despertar',
-      'viajar', 'conducir', 'montar', 'navegar', 'sumergir', 'flotar'
-    ],
-    fr: [
-      'voler', 'tomber', 'courir', 'nager', 'marcher', 'sauter', 'grimper',
-      'combattre', 'cacher', 'échapper', 'poursuivre', 'chercher', 'trouver', 'perdre',
-      'parler', 'chanter', 'danser', 'manger', 'boire', 'dormir', 'réveiller',
-      'voyager', 'conduire', 'monter', 'naviguer', 'plonger', 'flotter'
-    ],
-    de: [
-      'fliegen', 'fallen', 'rennen', 'schwimmen', 'gehen', 'springen', 'klettern',
-      'kämpfen', 'verstecken', 'entkommen', 'jagen', 'suchen', 'finden', 'verlieren',
-      'sprechen', 'singen', 'tanzen', 'essen', 'trinken', 'schlafen', 'aufwachen',
-      'reisen', 'fahren', 'reiten', 'segeln', 'tauchen', 'schweben'
-    ]
-  },
-  emotions: {
-    en: [
-      'fear', 'afraid', 'scared', 'happy', 'excited', 'sad', 'angry', 'confused',
-      'lost', 'alone', 'trapped', 'free', 'peaceful', 'calm', 'anxious', 'stressed',
-      'overwhelmed', 'love', 'hate', 'joy', 'sorrow', 'surprise', 'disgust', 'shame'
-    ],
-    it: [
-      'paura', 'spaventato', 'terrorizzato', 'felice', 'eccitato', 'triste', 'arrabbiato', 'confuso',
-      'perso', 'solo', 'intrappolato', 'libero', 'pacifico', 'calmo', 'ansioso', 'stressato',
-      'sopraffatto', 'amore', 'odio', 'gioia', 'dolore', 'sorpresa', 'disgusto', 'vergogna'
-    ],
-    es: [
-      'miedo', 'asustado', 'aterrado', 'feliz', 'emocionado', 'triste', 'enfadado', 'confundido',
-      'perdido', 'solo', 'atrapado', 'libre', 'pacífico', 'tranquilo', 'ansioso', 'estresado',
-      'abrumado', 'amor', 'odio', 'alegría', 'tristeza', 'sorpresa', 'asco', 'vergüenza'
-    ],
-    fr: [
-      'peur', 'effrayé', 'terrifié', 'heureux', 'excité', 'triste', 'en colère', 'confus',
-      'perdu', 'seul', 'piégé', 'libre', 'paisible', 'calme', 'anxieux', 'stressé',
-      'débordé', 'amour', 'haine', 'joie', 'chagrin', 'surprise', 'dégoût', 'honte'
-    ],
-    de: [
-      'angst', 'ängstlich', 'erschrocken', 'glücklich', 'aufgeregt', 'traurig', 'wütend', 'verwirrt',
-      'verloren', 'allein', 'gefangen', 'frei', 'friedlich', 'ruhig', 'besorgt', 'gestresst',
-      'überfordert', 'liebe', 'hass', 'freude', 'kummer', 'überraschung', 'ekel', 'scham'
-    ]
-  },
-  characters: {
-    en: [
-      'family', 'friend', 'stranger', 'monster', 'animal', 'dog', 'cat', 'bird',
-      'snake', 'spider', 'insect', 'bear', 'wolf', 'lion', 'tiger', 'fish', 'shark',
-      'human', 'child', 'adult', 'mother', 'father', 'sister', 'brother',
-      'ghost', 'spirit', 'angel', 'demon', 'alien', 'aliens', 'extraterrestrial', 'robot', 'astronaut', 'zombie'
-    ],
-    it: [
-      'famiglia', 'amico', 'sconosciuto', 'mostro', 'animale', 'cane', 'gatto', 'uccello',
-      'serpente', 'ragno', 'insetto', 'orso', 'lupo', 'leone', 'tigre', 'pesce', 'squalo',
-      'umano', 'bambino', 'adulto', 'madre', 'padre', 'sorella', 'fratello',
-      'fantasma', 'spirito', 'angelo', 'demone', 'alieno', 'alieni', 'extraterrestre', 'robot', 'astronauta', 'zombi'
-    ],
-    es: [
-      'familia', 'amigo', 'extraño', 'monstruo', 'animal', 'perro', 'gato', 'pájaro',
-      'serpiente', 'araña', 'insecto', 'oso', 'lobo', 'león', 'tigre', 'pez', 'tiburón',
-      'humano', 'niño', 'adulto', 'madre', 'padre', 'hermana', 'hermano',
-      'fantasma', 'espíritu', 'ángel', 'demonio', 'extraterrestre', 'robot', 'zombi'
-    ],
-    fr: [
-      'famille', 'ami', 'étranger', 'monstre', 'animal', 'chien', 'chat', 'oiseau',
-      'serpent', 'araignée', 'insecte', 'ours', 'loup', 'lion', 'tigre', 'poisson', 'requin',
-      'humain', 'enfant', 'adulte', 'mère', 'père', 'soeur', 'frère',
-      'fantôme', 'esprit', 'ange', 'démon', 'extraterrestre', 'robot', 'zombie'
-    ],
-    de: [
-      'familie', 'freund', 'fremder', 'monster', 'tier', 'hund', 'katze', 'vogel',
-      'schlange', 'spinne', 'insekt', 'bär', 'wolf', 'löwe', 'tiger', 'fisch', 'hai',
-      'mensch', 'kind', 'erwachsener', 'mutter', 'vater', 'schwester', 'bruder',
-      'geist', 'seele', 'engel', 'dämon', 'alien', 'roboter', 'zombie'
-    ]
-  },
-  elements: {
-    en: [
-      'water', 'fire', 'earth', 'air', 'wind', 'light', 'dark', 'darkness', 'sun',
-      'moon', 'stars', 'cloud', 'rain', 'snow', 'ice', 'storm', 'thunder', 
-      'lightning', 'rainbow', 'shadow', 'nature', 'tree', 'flower', 'rock', 'mountain'
-    ],
-    it: [
-      'acqua', 'fuoco', 'terra', 'aria', 'vento', 'luce', 'buio', 'oscurità', 'sole',
-      'luna', 'stelle', 'nuvola', 'pioggia', 'neve', 'ghiaccio', 'tempesta', 'tuono', 
-      'fulmine', 'arcobaleno', 'ombra', 'natura', 'albero', 'fiore', 'roccia', 'montagna'
-    ],
-    es: [
-      'agua', 'fuego', 'tierra', 'aire', 'viento', 'luz', 'oscuro', 'oscuridad', 'sol',
-      'luna', 'estrellas', 'nube', 'lluvia', 'nieve', 'hielo', 'tormenta', 'trueno', 
-      'relámpago', 'arcoíris', 'sombra', 'naturaleza', 'árbol', 'flor', 'roca', 'montaña'
-    ],
-    fr: [
-      'eau', 'feu', 'terre', 'air', 'vent', 'lumière', 'sombre', 'obscurité', 'soleil',
-      'lune', 'étoiles', 'nuage', 'pluie', 'neige', 'glace', 'tempête', 'tonnerre', 
-      'éclair', 'arc-en-ciel', 'ombre', 'nature', 'arbre', 'fleur', 'rocher', 'montagne'
-    ],
-    de: [
-      'wasser', 'feuer', 'erde', 'luft', 'wind', 'licht', 'dunkel', 'dunkelheit', 'sonne',
-      'mond', 'sterne', 'wolke', 'regen', 'schnee', 'eis', 'sturm', 'donner', 
-      'blitz', 'regenbogen', 'schatten', 'natur', 'baum', 'blume', 'felsen', 'berg'
-    ]
-  },
-  concepts: {
-    en: [
-      'time', 'death', 'life', 'birth', 'future', 'past', 'memory', 'dream', 
-      'nightmare', 'reality', 'fantasy', 'magic', 'power', 'control', 'freedom', 
-      'escape', 'transformation', 'change', 'beginning', 'end', 'infinity', 
-      'universe', 'world', 'dimension', 'portal', 'door'
-    ],
-    it: [
-      'tempo', 'morte', 'vita', 'nascita', 'futuro', 'passato', 'memoria', 'sogno', 
-      'incubo', 'realtà', 'fantasia', 'magia', 'potere', 'controllo', 'libertà', 
-      'fuga', 'trasformazione', 'cambiamento', 'inizio', 'fine', 'infinito', 
-      'universo', 'mondo', 'dimensione', 'portale', 'porta'
-    ],
-    es: [
-      'tiempo', 'muerte', 'vida', 'nacimiento', 'futuro', 'pasado', 'memoria', 'sueño', 
-      'pesadilla', 'realidad', 'fantasía', 'magia', 'poder', 'control', 'libertad', 
-      'escape', 'transformación', 'cambio', 'comienzo', 'fin', 'infinito', 
-      'universo', 'mundo', 'dimensión', 'portal', 'puerta'
-    ],
-    fr: [
-      'temps', 'mort', 'vie', 'naissance', 'futur', 'passé', 'mémoire', 'rêve', 
-      'cauchemar', 'réalité', 'fantaisie', 'magie', 'pouvoir', 'contrôle', 'liberté', 
-      'évasion', 'transformation', 'changement', 'début', 'fin', 'infini', 
-      'univers', 'monde', 'dimension', 'portail', 'porte'
-    ],
-    de: [
-      'zeit', 'tod', 'leben', 'geburt', 'zukunft', 'vergangenheit', 'erinnerung', 'traum', 
-      'albtraum', 'realität', 'fantasie', 'magie', 'kraft', 'kontrolle', 'freiheit', 
-      'flucht', 'verwandlung', 'veränderung', 'anfang', 'ende', 'unendlichkeit', 
-      'universum', 'welt', 'dimension', 'portal', 'tür'
-    ]
-  }
-};
-
-// Language-specific keyword maps
-const keywordCategoriesByLang: Record<string, Map<string, string>> = {};
-
-// Initialize maps for each supported language
+// Lingue supportate
 const supportedLanguages = ['en', 'it', 'es', 'fr', 'de'];
 
-for (const lang of supportedLanguages) {
-  keywordCategoriesByLang[lang] = new Map<string, string>();
-  
-  // Populate language-specific keyword maps
-  for (const [category, langKeywords] of Object.entries(tagCategories)) {
-    if (langKeywords[lang]) {
-      for (const keyword of langKeywords[lang]) {
-        keywordCategoriesByLang[lang].set(keyword, category);
-      }
-    }
-  }
-}
-
 /**
- * Generates tags from dream content
- * @param content The dream description
- * @param language The language of the content
- * @returns Array of tags
+ * Ottieni tag generici quando non è stato possibile estrarre tag significativi
+ * @param language Codice della lingua
+ * @returns Array di tag generici
  */
-export async function generateTags(content: string, language: string): Promise<string[]> {
-  // Convert content to lowercase for easier matching
-  const normalizedContent = content.toLowerCase();
-  
-  // Map ISO language codes to our supported codes
-  const langCode = matchLanguage(language);
-  
-  // Use a Set to avoid duplicate tags
-  const tagsSet = new Set<string>();
-  
-  // Tag scoring system to prioritize better matches
-  const tagScores: Record<string, number> = {};
-  
-  // Get category representatives (one tag per category to ensure diversity)
-  const categoryTags: Record<string, string[]> = {
-    places: [],
-    actions: [],
-    emotions: [],
-    characters: [],
-    elements: [],
-    concepts: []
-  };
-  
-  // Match language-specific tags first
-  if (keywordCategoriesByLang[langCode]) {
-    const keywordMap = keywordCategoriesByLang[langCode];
-    
-    // First pass: exact phrase match (highest priority)
-    keywordMap.forEach((category, keyword) => {
-      try {
-        // Check for exact phrase match
-        if (normalizedContent.includes(` ${keyword} `) || 
-            normalizedContent.startsWith(`${keyword} `) || 
-            normalizedContent.endsWith(` ${keyword}`) || 
-            normalizedContent === keyword) {
-          // Add to category-specific array with high score
-          categoryTags[category].push(keyword);
-          tagsSet.add(keyword);
-          tagScores[keyword] = 10; // Higher score for exact matches
-        }
-      } catch (e) {
-        // Error handling fallback - should never happen with this approach
-        console.error("Error in exact phrase matching:", e);
-      }
-    });
-    
-    // Second pass: word boundary match
-    keywordMap.forEach((category, keyword) => {
-      if (!tagsSet.has(keyword)) { // Skip if already added
-        try {
-          // Word boundary regex
-          const regex = new RegExp(`(^|\\W)${keyword}(\\W|$)`, 'i');
-          if (regex.test(normalizedContent)) {
-            categoryTags[category].push(keyword);
-            tagsSet.add(keyword);
-            tagScores[keyword] = 8; // Good score for word boundary matches
-          }
-        } catch (e) {
-          // In case of regex compilation error, fall back to includes for short keywords
-          if (keyword.length <= 4 && normalizedContent.includes(` ${keyword} `)) {
-            categoryTags[category].push(keyword);
-            tagsSet.add(keyword);
-            tagScores[keyword] = 6;
-          }
-        }
-      }
-    });
-    
-    // Third pass: partial word match for longer words (for handling conjugations, plurals, etc.)
-    if (tagsSet.size < 5) {
-      keywordMap.forEach((category, keyword) => {
-        // Only consider keywords with 5+ characters for partial matching
-        // and only if we haven't already added this keyword
-        if (keyword.length >= 5 && !tagsSet.has(keyword)) {
-          // For Italian verbs, check common conjugation patterns
-          if (langCode === 'it' && category === 'actions') {
-            // Check for common verb conjugations in Italian
-            // Examples: volare -> volavo, volando, vola, etc.
-            const wordRoot = keyword.substring(0, keyword.length - 3); // Remove 'are', 'ere', 'ire'
-            if (wordRoot.length >= 3) {
-              const conjugationRegex = new RegExp(`\\b${wordRoot}[a-z]{1,5}\\b`, 'i');
-              if (conjugationRegex.test(normalizedContent)) {
-                categoryTags[category].push(keyword);
-                tagsSet.add(keyword);
-                tagScores[keyword] = 7; // Good score for conjugation matches
-                return; // Skip the standard substring check
-              }
-            }
-          }
-          
-          // For plurals and general partial matches
-          if (normalizedContent.includes(keyword.substring(0, keyword.length - 1))) {
-            categoryTags[category].push(keyword);
-            tagsSet.add(keyword);
-            tagScores[keyword] = 5; // Lower score for partial matches
-          }
-        }
-      });
-    }
-    
-    // Fourth pass: context-aware special cases based on combinations of words
-    if (normalizedContent.includes('astronave') || normalizedContent.includes('navicella')) {
-      // These often go together
-      if (!tagsSet.has('astronave')) {
-        categoryTags['places'].push('astronave');
-        tagsSet.add('astronave');
-        tagScores['astronave'] = 9;
-      }
-      
-      // If we mention spacecraft, we might be dealing with aliens
-      if (!tagsSet.has('alieno') && normalizedContent.match(/\b(alien|extraterr|marz)/i)) {
-        categoryTags['characters'].push('alieno');
-        tagsSet.add('alieno');
-        tagScores['alieno'] = 8;
-      }
-    }
-    
-    // If we see "andare" or "andavamo" with "marte", add "spazio" as a tag
-    if ((normalizedContent.includes('andare') || normalizedContent.includes('andavamo') || 
-         normalizedContent.includes('andando')) && 
-        (normalizedContent.includes('marte') || normalizedContent.includes('pianeta'))) {
-      if (!tagsSet.has('spazio')) {
-        categoryTags['places'].push('spazio');
-        tagsSet.add('spazio');
-        tagScores['spazio'] = 9;
-      }
-    }
+function getGenericTags(language: string): string[] {
+  switch(language) {
+    case 'it':
+      return ['sogno', 'mistero', 'esperienza', 'immaginazione', 'emozione'];
+    case 'es':
+      return ['sueño', 'misterio', 'experiencia', 'imaginación', 'emoción'];
+    case 'fr':
+      return ['rêve', 'mystère', 'expérience', 'imagination', 'émotion'];
+    case 'de':
+      return ['traum', 'mysterium', 'erfahrung', 'vorstellung', 'gefühl'];
+    default: // English o qualsiasi altra lingua
+      return ['dream', 'mystery', 'experience', 'imagination', 'emotion'];
   }
-  
-  // Look for English tags as a fallback if we don't have enough
-  if (langCode !== 'en' && tagsSet.size < 4) {
-    const englishKeywordMap = keywordCategoriesByLang['en'];
-    
-    englishKeywordMap.forEach((category, keyword) => {
-      if (!tagsSet.has(keyword)) { // Skip if already added in native language
-        try {
-          const regex = new RegExp(`(^|\\W)${keyword}(\\W|$)`, 'i');
-          if (regex.test(normalizedContent)) {
-            categoryTags[category].push(keyword);
-            tagsSet.add(keyword);
-            tagScores[keyword] = 4; // Lower score for English fallbacks
-          }
-        } catch (e) {
-          // Fallback
-          if (normalizedContent.includes(keyword)) {
-            categoryTags[category].push(keyword);
-            tagsSet.add(keyword);
-            tagScores[keyword] = 3;
-          }
-        }
-      }
-    });
-  }
-  
-  // Select the best tags, prioritizing category diversity and scores
-  const prioritizedTags: string[] = [];
-  
-  // Sort keywords in each category by score
-  for (const category of Object.keys(categoryTags)) {
-    if (categoryTags[category].length > 0) {
-      // Sort tags within each category by score (highest first)
-      categoryTags[category].sort((a, b) => (tagScores[b] || 0) - (tagScores[a] || 0));
-      
-      // Take the highest-scoring tag from this category
-      prioritizedTags.push(categoryTags[category][0]);
-    }
-  }
-  
-  // Add remaining tags if we don't have enough
-  if (prioritizedTags.length < 5) {
-    // Get all remaining tags, sorted by score
-    const remainingTags = Array.from(tagsSet)
-      .filter(tag => !prioritizedTags.includes(tag))
-      .sort((a, b) => (tagScores[b] || 0) - (tagScores[a] || 0));
-    
-    prioritizedTags.push(...remainingTags.slice(0, 5 - prioritizedTags.length));
-  }
-  
-  const finalTags = prioritizedTags.slice(0, 5);
-  
-  // If still no tags found, provide some generic tags based on language
-  if (finalTags.length === 0) {
-    switch(langCode) {
-      case 'it':
-        return ['sogno', 'mistero', 'esperienza'];
-      case 'es':
-        return ['sueño', 'misterio', 'experiencia'];
-      case 'fr':
-        return ['rêve', 'mystère', 'expérience'];
-      case 'de':
-        return ['traum', 'mysterium', 'erfahrung'];
-      default: // English or any other
-        return ['dream', 'mystery', 'experience'];
-    }
-  }
-  
-  return finalTags;
 }
 
 /**
- * Maps any language code to our supported languages
+ * Mappa qualsiasi codice lingua alle nostre lingue supportate
+ * @param lang Codice lingua
+ * @returns Codice lingua normalizzato
  */
 function matchLanguage(lang: string): string {
-  // Normalize language code (e.g., 'it-IT' -> 'it')
+  // Normalizza il codice lingua (es. 'it-IT' -> 'it')
   const normLang = lang.split('-')[0].toLowerCase();
   
-  // Check if language is directly supported
+  // Controlla se la lingua è direttamente supportata
   if (supportedLanguages.includes(normLang)) {
     return normLang;
   }
   
-  // Language family fallbacks
+  // Fallback per varianti linguistiche
   const languageFamilies: Record<string, string> = {
-    // Spanish variants
+    // Varianti spagnole
     'es_mx': 'es', 'es_ar': 'es', 'es_co': 'es',
-    // French variants
+    // Varianti francesi
     'fr_ca': 'fr', 'fr_be': 'fr', 'fr_ch': 'fr',
-    // German variants
+    // Varianti tedesche
     'de_at': 'de', 'de_ch': 'de',
-    // Italian variants
+    // Varianti italiane
     'it_ch': 'it'
   };
   
@@ -463,63 +65,367 @@ function matchLanguage(lang: string): string {
     return languageFamilies[normLang];
   }
   
-  // Default to English
+  // Default a inglese
   return 'en';
 }
 
 /**
- * Calculate the similarity between two dream contents
- * @param content1 First dream content
- * @param content2 Second dream content
- * @returns Similarity score (0-100)
+ * Aggiungi termini comuni relativi ai sogni come tag di fallback
+ * @param tagSet Set di candidati tag da aumentare
+ * @param scoreMap Mappa dei punteggi da aggiornare
+ * @param language Codice della lingua da utilizzare
+ */
+function addDreamRelatedTags(
+  tagSet: Set<string>, 
+  scoreMap: Record<string, number>, 
+  language: string
+) {
+  // Temi comuni dei sogni per lingua
+  const dreamThemes: Record<string, string[]> = {
+    'en': ['dream', 'flying', 'falling', 'chase', 'water', 'family', 'journey'],
+    'it': ['sogno', 'volare', 'cadere', 'inseguimento', 'acqua', 'famiglia', 'viaggio'],
+    'es': ['sueño', 'volar', 'caer', 'persecución', 'agua', 'familia', 'viaje'],
+    'fr': ['rêve', 'voler', 'tomber', 'poursuite', 'eau', 'famille', 'voyage'],
+    'de': ['traum', 'fliegen', 'fallen', 'verfolgung', 'wasser', 'familie', 'reise']
+  };
+  
+  // Ottieni la lista appropriata per la lingua
+  const themeList = dreamThemes[language] || dreamThemes['en'];
+  
+  // Aggiungi temi ai candidati con punteggi bassi (così vengono usati solo se non viene trovato nulla di meglio)
+  for (const theme of themeList) {
+    if (!tagSet.has(theme)) {
+      tagSet.add(theme);
+      scoreMap[theme] = 1;  // Punteggio basso così vengono usati solo come fallback
+    }
+  }
+}
+
+/**
+ * Genera tag dal contenuto di un sogno utilizzando tecniche NLP
+ * @param content Descrizione del sogno
+ * @param language Lingua del contenuto
+ * @returns Array di tag
+ */
+export async function generateTags(content: string, language: string): Promise<string[]> {
+  if (!content || content.trim().length === 0) {
+    return getGenericTags(language);
+  }
+
+  // Normalizza il codice della lingua
+  const langCode = matchLanguage(language);
+  
+  // Crea una versione pulita del testo
+  const cleanedContent = content
+    .replace(/[^\w\s\u00C0-\u017F]/g, ' ')
+    .toLowerCase()
+    .trim();
+  
+  // Estrai i candidati per i tag utilizzando diverse tecniche
+  const tagCandidates = new Set<string>();
+  const tagScores: Record<string, number> = {};
+
+  // 1. Riconoscimento delle entità con compromise
+  try {
+    const doc = compromise(cleanedContent);
+    const entities: string[] = [];
+    
+    // Estrai persone se disponibile
+    if (doc.people && typeof doc.people === 'function') {
+      const people = doc.people().out('array');
+      entities.push(...people);
+    }
+    
+    // Estrai luoghi se disponibile
+    if (doc.places && typeof doc.places === 'function') {
+      const places = doc.places().out('array');
+      entities.push(...places);
+    }
+    
+    // Aggiungi le entità estratte ai candidati
+    for (const entity of entities) {
+      if (entity && entity.length > 2) {
+        const normalizedEntity = entity.toLowerCase().trim();
+        tagCandidates.add(normalizedEntity);
+        tagScores[normalizedEntity] = 8; // Alto punteggio per le entità riconosciute
+      }
+    }
+  } catch (error) {
+    console.error('Entity extraction error:', error);
+  }
+
+  // 2. Estrai sostantivi e verbi con compromise
+  try {
+    const doc = compromise(cleanedContent);
+    
+    // Estrai sostantivi
+    if (doc.nouns && typeof doc.nouns === 'function') {
+      const nouns = doc.nouns().out('array');
+      for (const noun of nouns) {
+        if (noun && noun.length > 3) {
+          const normalizedNoun = noun.toLowerCase().trim();
+          tagCandidates.add(normalizedNoun);
+          tagScores[normalizedNoun] = tagScores[normalizedNoun] || 5;
+        }
+      }
+    }
+    
+    // Estrai verbi
+    if (doc.verbs && typeof doc.verbs === 'function') {
+      const verbs = doc.verbs().out('array');
+      for (const verb of verbs) {
+        if (verb && verb.length > 3) {
+          // Rimuovi le desinenze comuni per ottenere la forma base del verbo
+          const normalizedVerb = verb.toLowerCase()
+            .replace(/ing$|ed$|s$|ando$|endo$|are$|ere$|ire$/, '')
+            .trim();
+            
+          if (normalizedVerb.length > 3) {
+            tagCandidates.add(normalizedVerb);
+            tagScores[normalizedVerb] = tagScores[normalizedVerb] || 4;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('POS tagging error:', error);
+  }
+
+  // 3. Usa keyword-extractor per l'estrazione di parole chiave specifiche per lingua
+  try {
+    // Mappa i nostri codici linguistici a quelli supportati da keyword-extractor
+    const extractorLangMap: Record<string, string> = {
+      'en': 'english',
+      'it': 'italian',
+      'es': 'spanish',
+      'fr': 'french',
+      'de': 'german'
+    };
+    
+    const extractorLang = extractorLangMap[langCode] || 'english';
+    
+    const extractionResult = keywordExtractor.extract(cleanedContent, {
+      language: extractorLang as any, // Type assertion per evitare l'errore
+      remove_digits: true,
+      return_changed_case: true,
+      remove_duplicates: true
+    });
+    
+    for (const keyword of extractionResult) {
+      if (keyword && keyword.length > 3) {
+        tagCandidates.add(keyword);
+        // Aumenta il punteggio se già rilevato da altri metodi
+        tagScores[keyword] = (tagScores[keyword] || 0) + 3;
+      }
+    }
+  } catch (error) {
+    console.error('Keyword extraction error:', error);
+  }
+
+  // 4. Usa TF-IDF per valutare i termini in base all'importanza
+  try {
+    const tfidf = new natural.TfIdf();
+    tfidf.addDocument(cleanedContent);
+    
+    // Ottieni i termini principali
+    tfidf.listTerms(0).forEach(item => {
+      if (item.term && item.term.length > 3 && !/^\d+$/.test(item.term)) {
+        // Aggiungi ai candidati se non già presente
+        tagCandidates.add(item.term);
+        // Usa il punteggio TF-IDF per influenzare il nostro punteggio (normalizza a 0-10)
+        const normalizedScore = Math.min(10, Math.max(0, item.tfidf * 2));
+        tagScores[item.term] = (tagScores[item.term] || 0) + normalizedScore;
+      }
+    });
+  } catch (error) {
+    console.error('TF-IDF error:', error);
+  }
+
+  // 5. Tokenizzazione e analisi di frequenza
+  try {
+    const tokens = tokenizer.tokenize(cleanedContent);
+    const frequencies: Record<string, number> = {};
+    
+    // Conta le frequenze dei token
+    for (const token of tokens) {
+      if (token && token.length > 3) {
+        const normalizedToken = token.toLowerCase();
+        frequencies[normalizedToken] = (frequencies[normalizedToken] || 0) + 1;
+        
+        // Aggiungi i token frequenti ai candidati
+        if (frequencies[normalizedToken] > 1) {
+          tagCandidates.add(normalizedToken);
+          // Bonus di frequenza
+          tagScores[normalizedToken] = (tagScores[normalizedToken] || 0) + 
+                                     Math.min(3, frequencies[normalizedToken]);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Tokenization error:', error);
+  }
+
+  // 6. Stemming per raggruppare parole correlate
+  try {
+    // Crea una mappa di stems a parole originali
+    const stemMap: Record<string, string[]> = {};
+    
+    // Esamina i nostri candidati tag
+    const candidatesArray = Array.from(tagCandidates);
+    for (const tag of candidatesArray) {
+      try {
+        // Ottieni lo stem
+        const stem = stemmer.stem(tag);
+        
+        // Inizializza l'array se è la prima volta che vediamo questo stem
+        if (!stemMap[stem]) {
+          stemMap[stem] = [];
+        }
+        
+        // Aggiungi questo tag all'array per questo stem
+        stemMap[stem].push(tag);
+      } catch (e) {
+        // Salta i termini problematici
+        continue;
+      }
+    }
+    
+    // Per ogni stem, mantieni solo il termine con il punteggio più alto o più frequente
+    for (const [stem, relatedTags] of Object.entries(stemMap)) {
+      if (relatedTags.length > 1) {
+        // Ordina per punteggio
+        relatedTags.sort((a, b) => (tagScores[b] || 0) - (tagScores[a] || 0));
+        
+        // Mantieni solo il tag con il punteggio più alto
+        const bestTag = relatedTags[0];
+        
+        // Rimuovi gli altri dai candidati
+        for (let i = 1; i < relatedTags.length; i++) {
+          tagCandidates.delete(relatedTags[i]);
+        }
+        
+        // Aumenta leggermente il punteggio del miglior tag
+        tagScores[bestTag] = (tagScores[bestTag] || 0) + 1;
+      }
+    }
+  } catch (error) {
+    console.error('Stemming error:', error);
+  }
+  
+  // 7. Analisi della coesione semantica
+  try {
+    // Identifica gruppi di parole che potrebbero formare concetti coesi
+    const phrases = cleanedContent.split(/[,.!?;:]/g).filter(p => p.trim().length > 0);
+    
+    for (const phrase of phrases) {
+      if (phrase.split(/\s+/).length >= 2 && phrase.split(/\s+/).length <= 4) {
+        // Questa è una frase di lunghezza ragionevole, potrebbe essere un concetto coeso
+        const normalizedPhrase = phrase.trim().toLowerCase();
+        
+        // Controlla se la frase contiene parti di tagCandidates già trovati
+        let containsCandidate = false;
+        const candidatesArray = Array.from(tagCandidates);
+        for (const candidate of candidatesArray) {
+          if (normalizedPhrase.includes(candidate)) {
+            containsCandidate = true;
+            break;
+          }
+        }
+        
+        // Se contiene candidati esistenti, potrebbe essere una frase significativa
+        if (containsCandidate) {
+          // Prendi la frase come un unico tag se non è troppo lunga
+          if (normalizedPhrase.length < 25) {
+            tagCandidates.add(normalizedPhrase);
+            tagScores[normalizedPhrase] = 6; // Buon punteggio per frasi semanticamente coese
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Semantic cohesion analysis error:', error);
+  }
+
+  // Se non abbiamo abbastanza candidati, aggiungi termini comuni relativi ai sogni
+  if (tagCandidates.size < 5) {
+    addDreamRelatedTags(tagCandidates, tagScores, langCode);
+  }
+
+  // Converti il set in array per ordinamento e selezione finale
+  const tagArray = Array.from(tagCandidates);
+  
+  // Ordina tag per punteggio (più alto prima)
+  tagArray.sort((a, b) => (tagScores[b] || 0) - (tagScores[a] || 0));
+  
+  // Prendi i migliori 5 tag
+  let finalTags = tagArray.slice(0, 5);
+  
+  // Controllo finale di qualità: rimuovi tag con meno di 3 caratteri
+  finalTags = finalTags.filter(tag => tag.length >= 3);
+  
+  // Se non abbiamo trovato tag, restituisci quelli generici
+  if (finalTags.length === 0) {
+    return getGenericTags(langCode);
+  }
+  
+  return finalTags;
+}
+
+/**
+ * Calcola la similarità tra due contenuti di sogni
+ * @param content1 Primo contenuto di sogno
+ * @param content2 Secondo contenuto di sogno
+ * @returns Punteggio di similarità (0-100)
  */
 export function calculateSimilarity(content1: string, content2: string): number {
   if (!content1 || !content2) return 0;
   
-  // Normalize and tokenize text
+  // Normalizza e tokenizza il testo
   const text1 = content1.toLowerCase();
   const text2 = content2.toLowerCase();
   
-  // Extract significant words (3+ chars)
+  // Estrai parole significative (3+ caratteri)
   const words1 = text1.split(/\W+/).filter(word => word.length > 3);
   const words2 = text2.split(/\W+/).filter(word => word.length > 3);
   
   if (words1.length === 0 || words2.length === 0) return 0;
   
-  // Create Sets for faster lookups
+  // Crea Sets per ricerche più veloci
   const uniqueWords1 = new Set(words1);
   const uniqueWords2 = new Set(words2);
   
-  // Count common words
+  // Conta le parole comuni
   let commonWords = 0;
-  for (const word of uniqueWords1) {
+  
+  // Utilizza Array.from per convertire il Set in array e iterare in modo compatibile
+  Array.from(uniqueWords1).forEach(word => {
     if (uniqueWords2.has(word)) {
       commonWords++;
     }
-  }
+  });
   
-  // Calculate weighted similarity score
-  // Base Jaccard similarity
+  // Calcola punteggio di similarità pesato
+  // Similarità Jaccard di base
   const totalUniqueWords = uniqueWords1.size + uniqueWords2.size - commonWords;
   if (totalUniqueWords === 0) return 0;
   const jaccardSimilarity = (commonWords / totalUniqueWords) * 100;
   
-  // Length similarity - penalize large differences in length
+  // Similarità di lunghezza - penalizza grandi differenze di lunghezza
   const shorterLength = Math.min(text1.length, text2.length);
   const longerLength = Math.max(text1.length, text2.length);
   const lengthRatio = shorterLength / longerLength;
   const lengthSimilarity = lengthRatio * 100;
   
-  // Keyword density - if common words represent a high percentage of either text, boost similarity
+  // Densità di parole chiave - se le parole comuni rappresentano un'alta percentuale di entrambi i testi, aumenta la similarità
   const keywordDensity1 = commonWords / uniqueWords1.size;
   const keywordDensity2 = commonWords / uniqueWords2.size;
-  const keywordDensityBoost = Math.max(keywordDensity1, keywordDensity2) * 20; // gives 0-20% boost
+  const keywordDensityBoost = Math.max(keywordDensity1, keywordDensity2) * 20; // da 0-20% boost
   
-  // Final weighted score - emphasize Jaccard similarity but consider other factors
+  // Punteggio finale pesato - enfatizza la similarità Jaccard ma considera altri fattori
   const weightedScore = (jaccardSimilarity * 0.65) + 
                         (lengthSimilarity * 0.15) + 
                         (keywordDensityBoost * 0.2);
   
-  // Ensure score is in 0-100 range
+  // Assicura che il punteggio sia nell'intervallo 0-100
   return Math.min(100, Math.max(0, weightedScore));
 }
