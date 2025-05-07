@@ -180,3 +180,53 @@ export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// Notifications
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(), // like, comment, message
+  userId: integer("user_id").notNull().references(() => users.id), // chi riceve la notifica
+  actorId: integer("actor_id").notNull().references(() => users.id), // chi ha generato l'azione
+  dreamId: integer("dream_id").references(() => dreams.id),
+  commentId: integer("comment_id").references(() => dreamComments.id),
+  chatId: integer("chat_id").references(() => dreamMatches.id),
+  content: text("content"),
+  read: boolean("read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).pick({
+  type: true,
+  userId: true,
+  actorId: true,
+  dreamId: true,
+  commentId: true,
+  chatId: true,
+  content: true,
+});
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+  actor: one(users, {
+    fields: [notifications.actorId],
+    references: [users.id],
+  }),
+  dream: one(dreams, {
+    fields: [notifications.dreamId],
+    references: [dreams.id],
+  }),
+  comment: one(dreamComments, {
+    fields: [notifications.commentId],
+    references: [dreamComments.id],
+  }),
+  chat: one(dreamMatches, {
+    fields: [notifications.chatId],
+    references: [dreamMatches.id],
+  }),
+}));

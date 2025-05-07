@@ -11,6 +11,7 @@ import { WebSocket } from "ws";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { notifications } from "../shared/schema";
 
 // Configurazione di multer per il caricamento delle immagini
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -1132,6 +1133,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Profile image updated successfully",
         profileImage: filePath
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Notifications API
+  app.get("/api/notifications", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const userId = req.user.id;
+      
+      // Ottieni tutte le notifiche dell'utente corrente
+      const notificationResults = await storage.db.select({
+        notification: notifications,
+        actor: {
+          id: users.id,
+          username: users.username,
+          profileImage: users.profileImage
+        }
+      })
+      .from(notifications)
+      .innerJoin(users, eq(notifications.actorId, users.id))
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt))
+      .limit(50);
+      
+      // Arricchisci i dati delle notifiche con informazioni correlate
+      const enrichedNotifications = await Promise.all(
+        notificationResults.map(async (row) => {
+          const notification = row.notification;
+          
+          // Dati base della notifica
+          const enriched: any = {
+            id: notification.id,
+            type: notification.type,
+            userId: notification.userId,
+            actorId: notification.actorId,
+            username: row.actor.username,
+            profileImage: row.actor.profileImage,
+            content: notification.content,
+            createdAt: notification.createdAt,
+            read: notification.read,
+          };
+          
+          // Aggiungi dati specifici in base al tipo di notifica
+          if (notification.dreamId) {
+            const dreamResult = await storage.db
+              .select({ id: dreams.id, title: dreams.title })
+              .from(dreams)
+              .where(eq(dreams.id, notification.dreamId))
+              .limit(1);
+            
+            if (dreamResult.length > 0) {
+              enriched.dreamId = dreamResult[0].id;
+              enriched.dreamTitle = dreamResult[0].title;
+            }
+          }
+          
+          return enriched;
+        })
+      );
+      
+      res.json(enrichedNotifications);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Segna una notifica come letta
+  app.post("/api/notifications/:id/read", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const notificationId = parseInt(req.params.id);
+      const userId = req.user.id;
+      
+      // Verifica che la notifica appartenga all'utente
+      const notificationResult = await storage.db
+        .select()
+        .from(notifications)
+        .where(and(
+          eq(notifications.id, notificationId),
+          eq(notifications.userId, userId)
+        ))
+        .limit(1);
+      
+      if (notificationResult.length === 0) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      
+      // Aggiorna lo stato della notifica
+      await storage.db
+        .update(notifications)
+        .set({ read: true })
+        .where(eq(notifications.id, notificationId));
+      
+      res.json({ message: "Notification marked as read" });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Segna tutte le notifiche come lette
+  app.post("/api/notifications/read-all", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const userId = req.user.id;
+      
+      await storage.db
+        .update(notifications)
+        .set({ read: true })
+        .where(eq(notifications.userId, userId));
+      
+      res.json({ message: "All notifications marked as read" });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Elimina una notifica
+  app.delete("/api/notifications/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const notificationId = parseInt(req.params.id);
+      const userId = req.user.id;
+      
+      // Verifica che la notifica appartenga all'utente
+      const notificationResult = await storage.db
+        .select()
+        .from(notifications)
+        .where(and(
+          eq(notifications.id, notificationId),
+          eq(notifications.userId, userId)
+        ))
+        .limit(1);
+      
+      if (notificationResult.length === 0) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      
+      // Elimina la notifica
+      await storage.db
+        .delete(notifications)
+        .where(eq(notifications.id, notificationId));
+      
+      res.json({ message: "Notification deleted" });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Elimina tutte le notifiche
+  app.delete("/api/notifications", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const userId = req.user.id;
+      
+      await storage.db
+        .delete(notifications)
+        .where(eq(notifications.userId, userId));
+      
+      res.json({ message: "All notifications deleted" });
     } catch (error) {
       next(error);
     }
