@@ -6,7 +6,7 @@ import { setupWebSockets } from "./socket";
 import { generateTags } from "./nlp";
 import { translateText } from "./translation";
 import { eq, and, like, desc, sql } from "drizzle-orm";
-import { dreams, dreamTags, dreamLikes, dreamComments, dreamMatches, chatMessages } from "@shared/schema";
+import { dreams, dreamTags, dreamLikes, dreamComments, dreamMatches, chatMessages, users } from "@shared/schema";
 import { WebSocket } from "ws";
 
 export async function registerRoutes(app: Express): Promise<Server> {
