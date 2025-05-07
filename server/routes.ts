@@ -581,6 +581,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const matchId = parseInt(req.params.id);
+      if (isNaN(matchId)) {
+        return res.status(400).json({ message: "Invalid match ID" });
+      }
       
       const match = await storage.db
         .select()
@@ -595,7 +598,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const matchData = match[0];
       
       const userDream = await storage.getDreamById(matchData.dreamId);
+      if (!userDream) {
+        return res.status(404).json({ message: "User dream not found" });
+      }
+      
       const matchedDream = await storage.getDreamById(matchData.matchedDreamId);
+      if (!matchedDream) {
+        return res.status(404).json({ message: "Matched dream not found" });
+      }
       
       // Check if the authenticated user is part of this match
       if (req.user.id !== userDream.authorId && req.user.id !== matchedDream.authorId) {
@@ -607,6 +617,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const otherDream = isUserDreamAuthor ? matchedDream : userDream;
       const otherUser = await storage.getUser(otherDream.authorId);
       
+      if (!otherUser) {
+        return res.status(404).json({ message: "Other user not found" });
+      }
+      
+      // Ensure score is a valid integer
+      let score = typeof matchData.score === 'number' ? matchData.score : 0;
+      if (isNaN(score)) score = 0;
+      
       res.json({
         id: matchData.id,
         user: {
@@ -616,7 +634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         dreamId: otherDream.id,
         dreamTitle: otherDream.title,
-        score: matchData.score,
+        score: score,
         createdAt: matchData.createdAt
       });
     } catch (error) {
@@ -632,6 +650,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const matchId = parseInt(req.params.id);
+      if (isNaN(matchId)) {
+        return res.status(400).json({ message: "Invalid match ID" });
+      }
       
       // Verify user is part of this match
       const match = await storage.db
@@ -647,7 +668,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const matchData = match[0];
       
       const userDream = await storage.getDreamById(matchData.dreamId);
+      if (!userDream) {
+        return res.status(404).json({ message: "User dream not found" });
+      }
+      
       const matchedDream = await storage.getDreamById(matchData.matchedDreamId);
+      if (!matchedDream) {
+        return res.status(404).json({ message: "Matched dream not found" });
+      }
       
       if (req.user.id !== userDream.authorId && req.user.id !== matchedDream.authorId) {
         return res.status(403).json({ message: "You don't have permission to view these messages" });
@@ -673,7 +701,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const matchId = parseInt(req.params.id);
+      if (isNaN(matchId)) {
+        return res.status(400).json({ message: "Invalid match ID" });
+      }
+      
       const { content } = req.body;
+      if (!content || typeof content !== 'string' || content.trim() === '') {
+        return res.status(400).json({ message: "Message content is required" });
+      }
       
       // Verify user is part of this match
       const match = await storage.db
@@ -689,7 +724,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const matchData = match[0];
       
       const userDream = await storage.getDreamById(matchData.dreamId);
+      if (!userDream) {
+        return res.status(404).json({ message: "User dream not found" });
+      }
+      
       const matchedDream = await storage.getDreamById(matchData.matchedDreamId);
+      if (!matchedDream) {
+        return res.status(404).json({ message: "Matched dream not found" });
+      }
       
       if (req.user.id !== userDream.authorId && req.user.id !== matchedDream.authorId) {
         return res.status(403).json({ message: "You don't have permission to send messages in this chat" });
