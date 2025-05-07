@@ -8,6 +8,8 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  avatarId: integer("avatar_id").default(0),  // Per la compatibilità con l'avatar pixel
+  profileImage: text("profile_image"),        // URL dell'immagine profilo
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

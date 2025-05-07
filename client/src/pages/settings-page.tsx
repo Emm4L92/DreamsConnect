@@ -5,10 +5,11 @@ import { LanguageSelector } from "@/components/ui/language-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Globe, LogOut, User, Shield } from "lucide-react";
+import { Globe, LogOut, User, Shield, Camera } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { ProfileImageUpload } from "@/components/user/profile-image-upload";
 
 export default function SettingsPage() {
   const { user, logoutMutation } = useAuth();
@@ -86,6 +87,9 @@ export default function SettingsPage() {
               </Button>
             </CardContent>
           </Card>
+          
+          {/* Aggiungiamo qui il componente per la gestione della foto profilo */}
+          <ProfileImageUpload />
         </TabsContent>
 
         <TabsContent value="language" className="space-y-4">
