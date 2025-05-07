@@ -13,22 +13,30 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Bell, Menu } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type NavbarProps = {
   onMenuClick: () => void;
+};
+
+type Notification = {
+  id: number;
+  type: string;
+  read: boolean;
 };
 
 export function Navbar({ onMenuClick }: NavbarProps) {
   const { user, logoutMutation } = useAuth();
   const { language } = useLanguage();
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [location] = useLocation();
+  const queryClient = useQueryClient();
   
   // Ottieni il numero reale di notifiche dal server
-  const { data: notifications = [] } = useQuery<any[]>({
+  const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ['/api/notifications'],
     // Normalmente useremmo un vero endpoint, ma per ora simuliamo
     queryFn: () => {
@@ -36,15 +44,21 @@ export function Navbar({ onMenuClick }: NavbarProps) {
       return [
         { id: 1, type: 'like', read: false },
         { id: 2, type: 'comment', read: false },
-        { id: 3, type: 'message', read: true }
+        { id: 3, type: 'message', read: true },
+        { id: 4, type: 'like', read: false }
       ];
     },
     // Aggiorna ogni 30 secondi
     refetchInterval: 30000,
   });
   
-  // Conta solo le notifiche non lette
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Calcola le notifiche non lette ogni volta che i dati cambiano
+  useEffect(() => {
+    if (notifications) {
+      const count = notifications.filter(n => !n.read).length;
+      setUnreadCount(count);
+    }
+  }, [notifications]);
   
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -53,6 +67,12 @@ export function Navbar({ onMenuClick }: NavbarProps) {
   const toggleNotificationPanel = () => {
     setNotificationPanelOpen(!notificationPanelOpen);
   };
+  
+  // Funzione per aggiornare il contatore delle notifiche
+  // Viene passata al componente NotificationPanel
+  const updateNotificationCount = useCallback((count: number) => {
+    setUnreadCount(count);
+  }, []);
   
   return (
     <>
@@ -114,7 +134,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-secondary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center border-2 border-black">
+                  <span className="absolute -top-1 -right-1 bg-secondary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center border-2 border-black animate-pulse">
                     {unreadCount}
                   </span>
                 )}
@@ -160,7 +180,8 @@ export function Navbar({ onMenuClick }: NavbarProps) {
       {/* Pannello Notifiche */}
       <NotificationPanel 
         isOpen={notificationPanelOpen} 
-        onClose={() => setNotificationPanelOpen(false)} 
+        onClose={() => setNotificationPanelOpen(false)}
+        onNotificationUpdate={updateNotificationCount}
       />
     </>
   );
