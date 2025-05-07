@@ -251,10 +251,12 @@ export function NotificationPanel({
   const getNotificationUrl = (notification: Notification) => {
     switch (notification.type) {
       case "like":
+        return `/dreams/${notification.dreamId}?highlight=like&userId=${notification.userId}`;
       case "comment":
-        return `/dreams/${notification.dreamId}`;
+        // Se c'è un ID specifico del commento, possiamo aggiungerlo alla query
+        return `/dreams/${notification.dreamId}?highlight=comment&userId=${notification.userId}${notification.id ? `&commentId=${notification.id}` : ''}`;
       case "message":
-        return `/chat/${notification.chatId}`;
+        return `/chat/${notification.chatId}?highlight=message&userId=${notification.userId}`;
       default:
         return "/";
     }

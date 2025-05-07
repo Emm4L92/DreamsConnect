@@ -13,6 +13,7 @@ import { SendHorizontal, Info } from "lucide-react";
 import { PixelAvatar } from "@/components/ui/pixel-avatar";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 type Message = {
   id: number;
