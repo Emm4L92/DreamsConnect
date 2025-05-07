@@ -529,14 +529,23 @@ export async function generateTags(content: string, language: string): Promise<s
                         'makes', 'made', 'making', 'see', 'sees', 'saw', 'seeing', 'watch',
                         'watches', 'watched', 'watching', 'look', 'looks', 'looked', 'looking',
                         'seem', 'seems', 'seemed', 'seeming'];
+                        
+    // Lista di pronomi da evitare completamente
+    const pronouns = ['i', 'me', 'my', 'mine', 'you', 'your', 'yours', 'he', 'him', 'his', 
+                      'she', 'her', 'hers', 'it', 'its', 'we', 'us', 'our', 'ours', 
+                      'they', 'them', 'their', 'theirs', 'this', 'that', 'these', 'those', 
+                      'who', 'whom', 'whose', 'which', 'what', 'myself', 'yourself', 'himself',
+                      'herself', 'itself', 'ourselves', 'yourselves', 'themselves'];
                           
     // Estraiamo coppie di parole di alta qualità (sostantivi composti o frasi nominali)
     for (let i = 0; i < words.length - 1; i++) {
-      // Verifica che entrambe le parole non siano preposizioni o verbi comuni
+      // Verifica che entrambe le parole non siano preposizioni, pronomi o verbi comuni
       if (prepositions.includes(words[i].toLowerCase()) || 
           prepositions.includes(words[i+1].toLowerCase()) ||
           commonVerbs.includes(words[i].toLowerCase()) ||
-          commonVerbs.includes(words[i+1].toLowerCase())) {
+          commonVerbs.includes(words[i+1].toLowerCase()) ||
+          pronouns.includes(words[i].toLowerCase()) ||
+          pronouns.includes(words[i+1].toLowerCase())) {
         continue;
       }
       
@@ -701,6 +710,16 @@ export async function generateTags(content: string, language: string): Promise<s
     
     // Pattern per frasi di sostantivi che contengono specifiche strutture
     if (/\b(forest that|trees were|forever trees|tall ancient|ancient and|singing all|shadows of|hidden in|birds singing)\b/i.test(tag)) {
+      return false;
+    }
+    
+    // Rimuovi pronomi come tag - molto più aggressivo con controllo esatto
+    if (/^(i|me|my|mine|you|your|yours|he|him|his|she|her|hers|it|its|we|us|our|ours|they|them|their|theirs|this|that|these|those|who|whom|whose|which|what)$/i.test(tag.toLowerCase())) {
+      return false;
+    }
+    
+    // Controllo esplicito per "they"
+    if (tag.toLowerCase() === "they") {
       return false;
     }
     
