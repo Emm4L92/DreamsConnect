@@ -60,12 +60,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch author information for all dreams
       const authorIds = [...dreamMap.values()].map(dream => dream.authorId);
       if (authorIds.length > 0) {
-        // Evitare problemi con SQL-injection creando parametri individuali
-        const placeholders = authorIds.map((_, i) => `$${i + 1}`).join(',');
-        const authors = await storage.db.execute(
-          sql`SELECT id, username FROM users WHERE id IN (${sql.raw(placeholders)})`,
-          authorIds
-        );
+        // Utilizziamo un approccio diverso senza parametrizzazione IN
+        const authorsQuery = await storage.db
+          .select({ id: users.id, username: users.username })
+          .from(users);
+        
+        const authors = authorsQuery.filter(author => authorIds.includes(author.id));
         
         const authorsMap = new Map(authors.map(author => [author.id, author]));
         
@@ -190,10 +190,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tags = tagsResult.map(t => t.tag);
       
       // Get author info
-      const authorResult = await storage.db.execute(
-        sql`SELECT id, username FROM users WHERE id = $1`,
-        [dream.authorId]
-      );
+      const authorResult = await storage.db
+        .select({ id: users.id, username: users.username })
+        .from(users)
+        .where(eq(users.id, dream.authorId))
+        .limit(1);
       
       const author = authorResult.length > 0 ? {
         id: authorResult[0].id,
@@ -390,10 +391,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get author information
       if (dreamMap.size > 0) {
-        const authorResult = await storage.db.execute(
-          sql`SELECT id, username FROM users WHERE id = $1`,
-          [userId]
-        );
+        const authorResult = await storage.db
+          .select({ id: users.id, username: users.username })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
           
         if (authorResult.length > 0) {
           for (const dream of dreamMap.values()) {
@@ -409,7 +411,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const likeCounts = await storage.db
         .select({ dreamId: dreamLikes.dreamId, count: sql<number>`count(*)` })
         .from(dreamLikes)
-        .where(sql`${dreamLikes.dreamId} IN (${[...dreamMap.keys()].join(',')})`)
         .groupBy(dreamLikes.dreamId);
       
       for (const count of likeCounts) {
@@ -422,7 +423,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const commentCounts = await storage.db
         .select({ dreamId: dreamComments.dreamId, count: sql<number>`count(*)` })
         .from(dreamComments)
-        .where(sql`${dreamComments.dreamId} IN (${[...dreamMap.keys()].join(',')})`)
         .groupBy(dreamComments.dreamId);
       
       for (const count of commentCounts) {
@@ -437,10 +437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userLikes = await storage.db
           .select()
           .from(dreamLikes)
-          .where(and(
-            eq(dreamLikes.userId, currentUserId),
-            sql`${dreamLikes.dreamId} IN (${[...dreamMap.keys()].join(',')})`
-          ));
+          .where(eq(dreamLikes.userId, currentUserId));
         
         for (const like of userLikes) {
           if (dreamMap.has(like.dreamId)) {
