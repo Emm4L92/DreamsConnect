@@ -730,124 +730,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to find dream matches
   async function findDreamMatches(dreamId: number) {
     try {
+      // Get the dream
       const dream = await storage.getDreamById(dreamId);
-      
       if (!dream) {
-        console.log(`[Match] Dream with ID ${dreamId} not found`);
+        console.log(`[Match] Dream ${dreamId} not found`);
         return;
       }
       
-      // Get tags for this dream
-      const dreamTagsResult = await storage.db
-        .select()
-        .from(dreamTags)
-        .where(eq(dreamTags.dreamId, dreamId));
+      // Get the dream's tags from storage - manually for 100% reliability
+      const allTags = await storage.db.select().from(dreamTags);
+      const dreamTags1 = allTags.filter(tag => tag.dreamId === dreamId);
       
-      const tags = dreamTagsResult.map(t => t.tag);
-      
+      const tags = dreamTags1.map(t => t.tag);
       if (tags.length === 0) {
-        console.log(`[Match] No tags found for dream ${dreamId}`);
+        console.log(`[Match] Dream ${dreamId} has no tags, skipping match finding`);
         return;
       }
       
       console.log(`[Match] Processing dream ${dreamId} with tags: ${tags.join(', ')}`);
       
-      // Approccio più semplice e diretto per ottenere sogni con almeno un tag corrispondente
-      // senza utilizzare query SQL complesse che causano errori con placeholder
+      // Trovo tutti i sogni e i loro tag per un confronto manuale
+      const allDreams = await storage.db.select().from(dreams);
       
-      // Trova tutti i tag che corrispondono a quelli del sogno corrente
-      const matchingTagsResult = await storage.db
-        .select()
-        .from(dreamTags)
-        .where(
-          and(
-            sql`${dreamTags.dreamId} != ${dreamId}`, // Esclude il sogno stesso
-            tags.length === 1 
-              ? eq(dreamTags.tag, tags[0]) 
-              : sql`${dreamTags.tag} IN (${sql.join(tags.map(t => t))})`
-          )
-        );
+      // Trova potenziali match (sogni di altri utenti)
+      const potentialMatches = [];
       
-      // Raggruppa per ID del sogno e conta quanti tag corrispondono
-      const dreamMatches = new Map();
-      for (const tag of matchingTagsResult) {
-        if (!dreamMatches.has(tag.dreamId)) {
-          dreamMatches.set(tag.dreamId, { 
-            dreamId: tag.dreamId, 
-            tagCount: 1,
-            tags: [tag.tag]
-          });
-        } else {
-          const match = dreamMatches.get(tag.dreamId);
-          match.tagCount += 1;
-          match.tags.push(tag.tag);
+      for (const otherDream of allDreams) {
+        // Non confrontare con se stesso o con sogni dello stesso utente
+        if (otherDream.id === dreamId || otherDream.authorId === dream.authorId) {
+          continue;
+        }
+        
+        // Trova i tag di questo sogno
+        const otherDreamTags = allTags
+          .filter(tag => tag.dreamId === otherDream.id)
+          .map(t => t.tag);
+        
+        if (otherDreamTags.length === 0) continue;
+        
+        // Conta quanti tag corrispondono
+        const matchingTags = tags.filter(tag => otherDreamTags.includes(tag));
+        const matchCount = matchingTags.length;
+        
+        // Applica soglia minima (almeno 30% dei tag devono corrispondere)
+        if (matchCount >= Math.ceil(tags.length * 0.3)) {
+          // Calcola il punteggio per i tag
+          const tagScore = (matchCount * 100.0) / tags.length;
+          
+          if (tagScore >= 50) {
+            // Calcola la similitudine di contenuto
+            let contentScore = 0;
+            try {
+              const { calculateSimilarity } = await import('./nlp');
+              contentScore = calculateSimilarity(dream.content, otherDream.content);
+              console.log(`[Match] Content similarity between dreams ${dreamId} and ${otherDream.id}: ${contentScore}`);
+            } catch (err) {
+              console.error(`[Match] Error calculating content similarity:`, err);
+            }
+            
+            // Punteggio finale: media pesata di tag (60%) e contenuto (40%)
+            const finalScore = (tagScore * 0.6) + (contentScore * 0.4);
+            console.log(`[Match] Final score: tag=${tagScore}, content=${contentScore}, final=${finalScore}`);
+            
+            // Crea match solo con similarità significativa
+            if (finalScore >= 60) {
+              potentialMatches.push({
+                dreamId: otherDream.id,
+                score: finalScore,
+                matchingTags: matchingTags
+              });
+            } else {
+              console.log(`[Match] Score too low (${finalScore}), skipping match`);
+            }
+          }
         }
       }
       
-      // Calcola il punteggio per ogni sogno in base ai tag corrispondenti
-      const potentialMatches = Array.from(dreamMatches.values())
-        .filter(match => match.tagCount >= Math.ceil(tags.length * 0.3))
-        .map(match => ({
-          ...match,
-          score: (match.tagCount * 100.0) / tags.length
-        }));
+      console.log(`[Match] Found ${potentialMatches.length} valid matches for dream ${dreamId}`);
       
-      console.log(`[Match] Found ${potentialMatches.length} potential matches`);
-      
-      // Process matches with enhanced content-based similarity
+      // Salva i match nel database
       for (const match of potentialMatches) {
-        // Usa il punteggio calcolato sopra
-        const tagScore = match.score;
-        
-        if (tagScore >= 50) {
-          const matchedDream = await storage.getDreamById(match.dreamId);
-          
-          if (!matchedDream) {
-            console.log(`[Match] Matched dream ${match.dreamId} not found, skipping`);
-            continue;
-          }
-          
-          // Don't match dreams from the same user
-          if (matchedDream.authorId === dream.authorId) {
-            console.log(`[Match] Skipping match with same author: ${matchedDream.authorId}`);
-            continue;
-          }
-          
-          // Calculate content similarity for better matching
-          let contentScore = 0;
-          try {
-            const { calculateSimilarity } = await import('./nlp');
-            contentScore = calculateSimilarity(dream.content, matchedDream.content);
-            console.log(`[Match] Content similarity between dreams ${dreamId} and ${match.dreamId}: ${contentScore}`);
-          } catch (err) {
-            console.error(`[Match] Error calculating content similarity:`, err);
-          }
-          
-          // Final score is weighted average of tag-based and content-based similarity
-          const finalScore = (tagScore * 0.6) + (contentScore * 0.4);
-          console.log(`[Match] Final score: tag=${tagScore}, content=${contentScore}, final=${finalScore}`);
-          
-          // Only create matches with significant similarity
-          if (finalScore < 60) {
-            console.log(`[Match] Score too low (${finalScore}), skipping match`);
-            continue;
-          }
-          
-          // Create match record
+        // Crea record di match
+        try {
           await storage.db.insert(dreamMatches).values({
             dreamId,
             matchedDreamId: match.dreamId,
-            score: finalScore,
+            score: match.score,
             createdAt: new Date()
           }).onConflictDoNothing();
           
-          // Create the reverse match too
+          // Crea anche il match inverso
           await storage.db.insert(dreamMatches).values({
             dreamId: match.dreamId,
             matchedDreamId: dreamId,
-            score: finalScore,
+            score: match.score,
             createdAt: new Date()
           }).onConflictDoNothing();
+          
+          console.log(`[Match] Created match between dreams ${dreamId} and ${match.dreamId} with score ${match.score}`);
+        } catch (err) {
+          console.error(`[Match] Error creating match record:`, err);
         }
       }
     } catch (error) {
