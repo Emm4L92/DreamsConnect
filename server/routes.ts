@@ -812,8 +812,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const match of potentialMatches) {
         // Crea record di match
         try {
-          // Converte score in intero
-          const intScore = Math.round(match.score);
+          // Assicura che lo score sia un intero
+          // Converte il numero a stringa, poi a numero intero e infine verifica che sia un valore valido
+          let intScore = parseInt(String(Math.round(match.score)));
+          if (isNaN(intScore)) intScore = 0; // Fallback per evitare NaN
+          
+          // Limitiamo anche il punteggio all'intervallo 0-100
+          intScore = Math.max(0, Math.min(100, intScore));
           
           await storage.db.insert(dreamMatches).values({
             dreamId,
@@ -825,7 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Crea anche il match inverso
           await storage.db.insert(dreamMatches).values({
             dreamId: match.dreamId,
-            matchedDreamId: dreamId,
+            matchedDreamId: dreamId, 
             score: intScore,
             createdAt: new Date()
           }).onConflictDoNothing();
@@ -901,36 +906,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ));
       
       // Get match details
-      const newMatches = await Promise.all(matchesResult.map(async (match) => {
-        const matchedDream = await storage.getDreamById(match.matchedDreamId);
-        const matchedUser = await storage.getUser(matchedDream.authorId);
-        
-        // Get common tags
-        const dreamTags1 = await storage.db
-          .select()
-          .from(dreamTags)
-          .where(eq(dreamTags.dreamId, match.dreamId));
-        
-        const dreamTags2 = await storage.db
-          .select()
-          .from(dreamTags)
-          .where(eq(dreamTags.dreamId, match.matchedDreamId));
-        
-        const tags1 = new Set(dreamTags1.map(t => t.tag));
-        const commonTags = dreamTags2
-          .map(t => t.tag)
-          .filter(tag => tags1.has(tag));
-        
-        return {
-          id: match.id,
-          userId: matchedUser.id,
-          username: matchedUser.username,
-          dreamId: matchedDream.id,
-          dreamTitle: matchedDream.title,
-          matchPercentage: match.score,
-          tag: commonTags.length > 0 ? commonTags[0] : 'dreams'
-        };
-      }));
+      const matchPromises = matchesResult.map(async (match) => {
+        try {
+          // Gestione degli errori e valori nulli
+          const matchedDream = await storage.getDreamById(match.matchedDreamId);
+          if (!matchedDream) {
+            console.log(`[Match Notification] Matched dream ${match.matchedDreamId} not found, skipping`);
+            return null;
+          }
+          
+          const matchedUser = await storage.getUser(matchedDream.authorId);
+          if (!matchedUser) {
+            console.log(`[Match Notification] User ${matchedDream.authorId} not found, skipping`);
+            return null;
+          }
+          
+          // Get common tags
+          const dreamTags1 = await storage.db
+            .select()
+            .from(dreamTags)
+            .where(eq(dreamTags.dreamId, match.dreamId));
+          
+          const dreamTags2 = await storage.db
+            .select()
+            .from(dreamTags)
+            .where(eq(dreamTags.dreamId, match.matchedDreamId));
+          
+          const tags1 = new Set(dreamTags1.map(t => t.tag));
+          const commonTags = dreamTags2
+            .map(t => t.tag)
+            .filter(tag => tags1.has(tag));
+          
+          // Assicuriamoci che matchPercentage sia un numero intero valido
+          let matchPercentage = typeof match.score === 'number' ? match.score : 0;
+          
+          return {
+            id: match.id,
+            userId: matchedUser.id,
+            username: matchedUser.username,
+            dreamId: matchedDream.id,
+            dreamTitle: matchedDream.title,
+            matchPercentage: matchPercentage,
+            tag: commonTags.length > 0 ? commonTags[0] : 'dreams'
+          };
+        } catch (error) {
+          console.error(`[Match Notification] Error processing match ${match.id}:`, error);
+          return null;
+        }
+      });
+      
+      const newMatchesWithNulls = await Promise.all(matchPromises);
+      // Filtra null e undefined
+      const newMatches = newMatchesWithNulls.filter(Boolean);
       
       res.json(newMatches);
     } catch (error) {
