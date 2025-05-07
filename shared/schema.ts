@@ -49,6 +49,7 @@ export type Dream = typeof dreams.$inferSelect & {
   author?: {
     id: number;
     username: string;
+    profileImage?: string | null;
   };
   isLikedByUser?: boolean;
   likeCount?: number;

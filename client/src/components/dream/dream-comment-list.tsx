@@ -103,7 +103,12 @@ export function DreamCommentList({ dreamId }: DreamCommentListProps) {
         >
           <CardContent className="pt-6">
             <div className="flex items-start gap-3 mb-3">
-              <PixelAvatar id={comment.userId % 6} size="sm" />
+              <PixelAvatar 
+                id={comment.userId % 6} 
+                size="sm" 
+                profileImage={comment.profileImage}
+                username={comment.username}
+              />
               <div className="flex-1">
                 <div className="flex justify-between">
                   <h4 className="font-semibold">{comment.username || "User"}</h4>

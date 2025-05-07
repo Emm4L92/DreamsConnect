@@ -227,14 +227,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get author info
       const authorResult = await storage.db
-        .select({ id: users.id, username: users.username })
+        .select({ 
+          id: users.id, 
+          username: users.username,
+          profileImage: users.profileImage
+        })
         .from(users)
         .where(eq(users.id, dream.authorId))
         .limit(1);
       
       const author = authorResult.length > 0 ? {
         id: authorResult[0].id,
-        username: authorResult[0].username
+        username: authorResult[0].username,
+        profileImage: authorResult[0].profileImage
       } : null;
       
       // Get comments
@@ -404,6 +409,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Dream deleted successfully" });
     } catch (error) {
       console.error("Error deleting dream:", error);
+      next(error);
+    }
+  });
+
+  app.get("/api/dreams/:id/comments", async (req, res, next) => {
+    try {
+      const dreamId = parseInt(req.params.id);
+      const page = parseInt(req.query.page as string || "1");
+      const limit = parseInt(req.query.limit as string || "5");
+      const offset = (page - 1) * limit;
+      
+      // Get total count first
+      const countResult = await storage.db
+        .select({ count: sql<number>`count(*)` })
+        .from(dreamComments)
+        .where(eq(dreamComments.dreamId, dreamId));
+      
+      const total = countResult[0]?.count || 0;
+      
+      // Get paginated comments with user info
+      const result = await storage.db
+        .select({
+          id: dreamComments.id,
+          content: dreamComments.content,
+          dreamId: dreamComments.dreamId,
+          createdAt: dreamComments.createdAt,
+          userId: dreamComments.userId,
+          username: users.username,
+          profileImage: users.profileImage
+        })
+        .from(dreamComments)
+        .innerJoin(users, eq(dreamComments.userId, users.id))
+        .where(eq(dreamComments.dreamId, dreamId))
+        .orderBy(desc(dreamComments.createdAt))
+        .limit(limit)
+        .offset(offset);
+      
+      res.json({
+        comments: result,
+        total,
+        page,
+        limit
+      });
+    } catch (error) {
       next(error);
     }
   });
