@@ -308,6 +308,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/dreams/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "You must be logged in to delete dreams" });
+      }
+      
+      const dreamId = parseInt(req.params.id);
+      
+      // Verify the dream exists and belongs to the user
+      const dreamResult = await storage.db
+        .select()
+        .from(dreams)
+        .where(eq(dreams.id, dreamId))
+        .limit(1);
+      
+      if (dreamResult.length === 0) {
+        return res.status(404).json({ message: "Dream not found" });
+      }
+      
+      if (dreamResult[0].authorId !== req.user.id) {
+        return res.status(403).json({ message: "You don't have permission to delete this dream" });
+      }
+      
+      // Delete related records first to avoid foreign key constraint issues
+      // Delete comments
+      await storage.db
+        .delete(dreamComments)
+        .where(eq(dreamComments.dreamId, dreamId));
+      
+      // Delete likes
+      await storage.db
+        .delete(dreamLikes)
+        .where(eq(dreamLikes.dreamId, dreamId));
+      
+      // Delete tags
+      await storage.db
+        .delete(dreamTags)
+        .where(eq(dreamTags.dreamId, dreamId));
+      
+      // Delete matches where this dream is part of
+      await storage.db
+        .delete(dreamMatches)
+        .where(
+          eq(dreamMatches.dreamId, dreamId)
+        );
+      
+      await storage.db
+        .delete(dreamMatches)
+        .where(
+          eq(dreamMatches.matchedDreamId, dreamId)
+        );
+      
+      // Finally delete the dream itself
+      await storage.db
+        .delete(dreams)
+        .where(eq(dreams.id, dreamId));
+      
+      res.json({ message: "Dream deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting dream:", error);
+      next(error);
+    }
+  });
+
   app.post("/api/dreams/:id/comments", async (req, res, next) => {
     try {
       if (!req.isAuthenticated()) {
