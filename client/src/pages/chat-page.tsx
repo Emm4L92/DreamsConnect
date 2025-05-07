@@ -40,9 +40,11 @@ export default function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [match, params] = useRoute("/chat/:matchId");
   const matchId = match ? parseInt(params.matchId) : undefined;
+  const [highlightedMessageId, setHighlightedMessageId] = useState<number | null>(null);
   
   const { user } = useAuth();
   const { send, lastMessage, readyState } = useWebSocket();
+  const { toast } = useToast();
   
   // Fetch match details
   const { data: matchData } = useQuery<ChatMatch, Error>({
@@ -66,6 +68,34 @@ export default function ChatPage() {
       return res.json();
     },
   });
+  
+  // Controlla i parametri di query per l'evidenziazione dei messaggi
+  useEffect(() => {
+    if (!matchId) return;
+    
+    const params = new URLSearchParams(window.location.search);
+    const messageId = params.get('messageId');
+    const highlight = params.get('highlight');
+    const userId = params.get('userId');
+    
+    if (messageId && highlight === 'message') {
+      const msgId = parseInt(messageId);
+      setHighlightedMessageId(msgId);
+      
+      // Mostra una notifica
+      let userName = 'Qualcuno';
+      if (userId) {
+        // In una vera implementazione si potrebbe fare un fetch dei dettagli dell'utente
+        userName = 'Un utente';
+      }
+      
+      toast({
+        title: 'Nuovo messaggio',
+        description: `${userName} ti ha inviato un messaggio`,
+        duration: 5000,
+      });
+    }
+  }, [matchId, toast]);
   
   // Process incoming websocket messages
   useEffect(() => {
@@ -193,11 +223,29 @@ export default function ChatPage() {
                                 className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                               >
                                 <div 
-                                  className={`max-w-[80%] p-3 border-2 border-black ${
+                                  id={`message-${msg.id}`}
+                                  className={`max-w-[80%] p-3 border-2 border-black transition-all ${
                                     isOwn 
                                       ? 'bg-primary text-white rotate-1' 
                                       : 'bg-white rotate-neg-1'
+                                  } ${
+                                    highlightedMessageId === msg.id 
+                                      ? 'ring-2 ring-offset-2 ring-primary shadow-lg animate-pulse' 
+                                      : ''
                                   }`}
+                                  ref={highlightedMessageId === msg.id ? (el) => {
+                                    // Scorre all'elemento evidenziato
+                                    if (el) {
+                                      setTimeout(() => {
+                                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        
+                                        // Rimuovi l'evidenziazione dopo alcuni secondi
+                                        setTimeout(() => {
+                                          setHighlightedMessageId(null);
+                                        }, 5000);
+                                      }, 500);
+                                    }
+                                  } : undefined}
                                 >
                                   <p>{msg.content}</p>
                                   <p className={`text-xs ${isOwn ? 'text-blue-100' : 'text-gray-500'} mt-1`}>

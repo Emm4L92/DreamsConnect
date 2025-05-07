@@ -80,6 +80,9 @@ export default function DreamDetailPage() {
     }
   }, [toast]);
   
+  const { data: dream, isLoading, error } = useDream(dreamId);
+  const translationMutation = useTranslateDream();
+  
   // Effetto per evidenziare e scorrere agli elementi dopo che i dati sono caricati
   useEffect(() => {
     if (!dream) return;
@@ -112,9 +115,6 @@ export default function DreamDetailPage() {
       }
     }, 500);
   }, [dream]);
-  
-  const { dream, isLoading, error } = useDream(dreamId);
-  const translationMutation = useTranslateDream();
   
   if (isLoading) {
     return (
@@ -212,7 +212,7 @@ export default function DreamDetailPage() {
             <h1 className="text-2xl font-display font-bold">{dream.title}</h1>
             
             <div className="flex flex-wrap gap-2 mt-2">
-              {dream.tags?.map(tag => (
+              {dream.tags?.map((tag: string) => (
                 <Badge key={tag} variant="secondary" className="font-display">
                   {tag}
                 </Badge>
