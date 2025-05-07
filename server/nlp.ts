@@ -731,6 +731,20 @@ export async function generateTags(content: string, language: string): Promise<s
     return getGenericTags(langCode);
   }
   
+  // Ultimo controllo di sicurezza: rimuovi esplicitamente i pronomi dalla lista finale
+  finalTags = finalTags.filter(tag => 
+    !["i", "me", "my", "mine", "you", "your", "yours", "he", "him", "his", 
+      "she", "her", "hers", "it", "its", "we", "us", "our", "ours", 
+      "they", "them", "their", "theirs", "this", "that", "these", "those",
+      "myself", "yourself", "himself", "herself", "itself", "ourselves", "yourselves", "themselves"]
+      .includes(tag.toLowerCase())
+  );
+  
+  // Se non abbiamo tag dopo il filtraggio finale, restituisci quelli generici
+  if (finalTags.length === 0) {
+    return getGenericTags(langCode);
+  }
+  
   // Assicurati di selezionare solo fino a 5 tag
   return finalTags.slice(0, 5);
 }
