@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { setupWebSockets } from "./socket";
 import { generateTags } from "./nlp";
 import { translateText } from "./translation";
-import { eq, and, like, desc, sql } from "drizzle-orm";
+import { eq, ne, and, like, desc, sql } from "drizzle-orm";
 import { dreams, dreamTags, dreamLikes, dreamComments, dreamMatches, chatMessages, users } from "@shared/schema";
 import { WebSocket } from "ws";
 
@@ -752,27 +752,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[Match] Processing dream ${dreamId} with tags: ${tags.join(', ')}`);
       
-      // Find all dreams with at least one matching tag
-      // We'll use SQL directly for this query since we had issues with tag.in
-      const potentialMatchesResult = await storage.db.execute(sql`
-        SELECT 
-          dream_tags.dream_id as "dreamId", 
-          COUNT(*) as "tagCount",
-          COUNT(*) * 100.0 / ${tags.length} as "score"
-        FROM dream_tags
-        WHERE dream_tags.tag IN (${sql.join(tags)})
-          AND dream_tags.dream_id != ${dreamId}
-        GROUP BY dream_tags.dream_id
-        HAVING COUNT(*) >= ${Math.ceil(tags.length * 0.3)} 
-      `);
+      // Approccio più semplice e diretto per ottenere sogni con almeno un tag corrispondente
+      // senza utilizzare query SQL complesse che causano errori con placeholder
       
-      const potentialMatches = potentialMatchesResult.rows;
+      // Trova tutti i tag che corrispondono a quelli del sogno corrente
+      const matchingTagsResult = await storage.db
+        .select()
+        .from(dreamTags)
+        .where(
+          and(
+            sql`${dreamTags.dreamId} != ${dreamId}`, // Esclude il sogno stesso
+            tags.length === 1 
+              ? eq(dreamTags.tag, tags[0]) 
+              : sql`${dreamTags.tag} IN (${sql.join(tags.map(t => t))})`
+          )
+        );
+      
+      // Raggruppa per ID del sogno e conta quanti tag corrispondono
+      const dreamMatches = new Map();
+      for (const tag of matchingTagsResult) {
+        if (!dreamMatches.has(tag.dreamId)) {
+          dreamMatches.set(tag.dreamId, { 
+            dreamId: tag.dreamId, 
+            tagCount: 1,
+            tags: [tag.tag]
+          });
+        } else {
+          const match = dreamMatches.get(tag.dreamId);
+          match.tagCount += 1;
+          match.tags.push(tag.tag);
+        }
+      }
+      
+      // Calcola il punteggio per ogni sogno in base ai tag corrispondenti
+      const potentialMatches = Array.from(dreamMatches.values())
+        .filter(match => match.tagCount >= Math.ceil(tags.length * 0.3))
+        .map(match => ({
+          ...match,
+          score: (match.tagCount * 100.0) / tags.length
+        }));
+      
       console.log(`[Match] Found ${potentialMatches.length} potential matches`);
       
       // Process matches with enhanced content-based similarity
       for (const match of potentialMatches) {
-        // Parse the score as it might be a string from SQL
-        const tagScore = parseFloat(match.score as any) || 0;
+        // Usa il punteggio calcolato sopra
+        const tagScore = match.score;
         
         if (tagScore >= 50) {
           const matchedDream = await storage.getDreamById(match.dreamId);
@@ -820,7 +845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.db.insert(dreamMatches).values({
             dreamId: match.dreamId,
             matchedDreamId: dreamId,
-            score: match.score,
+            score: finalScore,
             createdAt: new Date()
           }).onConflictDoNothing();
         }
@@ -830,6 +855,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Endpoint per ricalcolare tutti i match (solo per sviluppo/test)
+  app.post("/api/admin/recalculate-matches", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "You must be logged in" });
+      }
+      
+      // Otteniamo tutti i sogni
+      const allDreams = await storage.db.select().from(dreams);
+      
+      // Eliminiamo tutti i match esistenti
+      await storage.db.delete(dreamMatches);
+      
+      console.log(`[Match Admin] Deleted all existing matches`);
+      console.log(`[Match Admin] Processing ${allDreams.length} dreams for matches`);
+      
+      // Elaboriamo ogni sogno per trovare match
+      for (const dream of allDreams) {
+        await findDreamMatches(dream.id);
+      }
+      
+      const matchCount = await storage.db.select({ count: sql`count(*)` }).from(dreamMatches);
+      
+      res.json({ 
+        success: true, 
+        message: `Processed ${allDreams.length} dreams and created ${matchCount[0].count} matches` 
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   // New matches (for notification)
   app.get("/api/matches/new", async (req, res, next) => {
     try {
