@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express, type Request } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
@@ -8,6 +8,42 @@ import { translateText } from "./translation";
 import { eq, ne, and, like, desc, sql } from "drizzle-orm";
 import { dreams, dreamTags, dreamLikes, dreamComments, dreamMatches, chatMessages, users } from "@shared/schema";
 import { WebSocket } from "ws";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// Configurazione di multer per il caricamento delle immagini
+const uploadDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage_multer = multer.diskStorage({
+  destination: function (_req, _file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const userId = (req as any).user?.id;
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `profile-${userId}-${uniqueSuffix}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage: storage_multer,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+  fileFilter: (_req, file, cb) => {
+    // Accetta solo immagini
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo i file immagine sono permessi!'));
+    }
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
@@ -1009,6 +1045,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // This endpoint was moved before /api/matches/:id to solve route conflicts
+
+  // Aggiunta della route per servire i file statici uploadati
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+  // Route per il caricamento della foto profilo
+  app.post('/api/user/profile-image', upload.single('profileImage'), async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "You must be logged in to update your profile" });
+      }
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file uploaded" });
+      }
+      
+      const userId = req.user.id;
+      const filePath = `/uploads/${req.file.filename}`;
+      
+      // Aggiorna il campo immagine profilo dell'utente
+      await storage.db
+        .update(users)
+        .set({ profileImage: filePath })
+        .where(eq(users.id, userId));
+      
+      // Restituisce l'URL dell'immagine caricata
+      res.status(200).json({ 
+        message: "Profile image updated successfully",
+        profileImage: filePath
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
 
   return httpServer;
 }

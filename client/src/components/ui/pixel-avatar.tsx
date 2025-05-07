@@ -14,12 +14,23 @@ type PixelAvatarProps = {
   id: number;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
+  profileImage?: string | null;  // URL dell'immagine profilo personalizzata
+  username?: string;             // Nome utente per l'attributo alt
 };
 
-export function PixelAvatar({ id, size = "sm", className }: PixelAvatarProps) {
-  // Make sure we have a valid ID within the range of available avatars
+export function PixelAvatar({ 
+  id, 
+  size = "sm", 
+  className,
+  profileImage,
+  username
+}: PixelAvatarProps) {
+  // Determiniamo se utilizzare l'immagine profilo caricata o l'avatar pixel
+  const useCustomImage = !!profileImage;
+  
+  // Se non c'è un'immagine personalizzata, utilizziamo un pixel avatar
   const safeId = Math.abs(id % AVATAR_URLS.length);
-  const avatarUrl = AVATAR_URLS[safeId];
+  const avatarUrl = useCustomImage ? profileImage : AVATAR_URLS[safeId];
   
   const sizeClasses = {
     sm: "w-10 h-10",
@@ -28,15 +39,26 @@ export function PixelAvatar({ id, size = "sm", className }: PixelAvatarProps) {
     xl: "w-20 h-20"
   };
   
+  const altText = username ? `${username}'s avatar` : "User avatar";
+  
   return (
     <img 
-      src={avatarUrl} 
-      alt="Pixel art avatar" 
+      src={avatarUrl as string} 
+      alt={altText} 
       className={cn(
-        "border-2 border-black pixel-border",
+        "border-2 border-black pixel-border object-cover",
+        useCustomImage ? "rounded-full" : "",
         sizeClasses[size],
         className
       )}
+      onError={(e) => {
+        // Se l'immagine personalizzata non si carica, fallback all'avatar pixel
+        if (useCustomImage) {
+          const target = e.target as HTMLImageElement;
+          target.src = AVATAR_URLS[safeId];
+          target.classList.remove("rounded-full");
+        }
+      }}
     />
   );
 }

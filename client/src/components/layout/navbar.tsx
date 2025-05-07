@@ -146,7 +146,12 @@ export function Navbar({ onMenuClick }: NavbarProps) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <div className="flex items-center gap-2 cursor-pointer">
-                      <PixelAvatar id={user.id % 6} className="rotate-neg-1" />
+                      <PixelAvatar 
+                        id={user.id % 6} 
+                        className="rotate-neg-1" 
+                        profileImage={user.profileImage}
+                        username={user.username}
+                      />
                       <span className="font-semibold hidden md:block">{user.username}</span>
                     </div>
                   </DropdownMenuTrigger>

@@ -20,8 +20,8 @@ export function ProfileImageUpload() {
   // Mutation per aggiornare l'immagine profilo
   const updateProfileImageMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await apiRequest("POST", "/api/user/profile-image", formData, {
-        rawBody: true, // Per inviare FormData invece di JSON
+      const res = await apiRequest("POST", "/api/user/profile-image", undefined, {
+        rawBody: formData, // Invia FormData come corpo della richiesta
       });
       return await res.json();
     },
