@@ -19,31 +19,41 @@ const tagCategories: TagCategories = {
       'house', 'home', 'building', 'city', 'mountain', 'mountains', 'ocean', 'sea', 
       'beach', 'forest', 'woods', 'jungle', 'desert', 'river', 'lake', 'island', 
       'cave', 'castle', 'school', 'office', 'hospital', 'church', 'park', 'garden',
-      'sky', 'space', 'underwater', 'subway', 'train', 'airplane', 'car', 'road', 'street'
+      'sky', 'space', 'underwater', 'subway', 'train', 'airplane', 'car', 'road', 'street',
+      'spaceship', 'spacecraft', 'ufo', 'mars', 'moon', 'planet', 'galaxy', 'universe',
+      'rocket', 'shuttle', 'station', 'satellite'
     ],
     it: [
       'casa', 'edificio', 'città', 'montagna', 'montagne', 'oceano', 'mare', 
       'spiaggia', 'foresta', 'bosco', 'giungla', 'deserto', 'fiume', 'lago', 'isola', 
       'grotta', 'castello', 'scuola', 'ufficio', 'ospedale', 'chiesa', 'parco', 'giardino',
-      'cielo', 'spazio', 'sottomarino', 'metropolitana', 'treno', 'aereo', 'auto', 'strada', 'via'
+      'cielo', 'spazio', 'sottomarino', 'metropolitana', 'treno', 'aereo', 'auto', 'strada', 'via',
+      'astronave', 'navicella', 'astronavi', 'ufo', 'marte', 'luna', 'pianeta', 'galassia', 'universo',
+      'razzo', 'navetta', 'stazione', 'satellite'
     ],
     es: [
       'casa', 'edificio', 'ciudad', 'montaña', 'montañas', 'océano', 'mar', 
       'playa', 'bosque', 'selva', 'desierto', 'río', 'lago', 'isla', 
       'cueva', 'castillo', 'escuela', 'oficina', 'hospital', 'iglesia', 'parque', 'jardín',
-      'cielo', 'espacio', 'submarino', 'metro', 'tren', 'avión', 'coche', 'carretera', 'calle'
+      'cielo', 'espacio', 'submarino', 'metro', 'tren', 'avión', 'coche', 'carretera', 'calle',
+      'nave espacial', 'ovni', 'marte', 'luna', 'planeta', 'galaxia', 'universo',
+      'cohete', 'estación', 'satélite'
     ],
     fr: [
       'maison', 'bâtiment', 'ville', 'montagne', 'montagnes', 'océan', 'mer', 
       'plage', 'forêt', 'bois', 'jungle', 'désert', 'rivière', 'lac', 'île', 
       'grotte', 'château', 'école', 'bureau', 'hôpital', 'église', 'parc', 'jardin',
-      'ciel', 'espace', 'sous-marin', 'métro', 'train', 'avion', 'voiture', 'route', 'rue'
+      'ciel', 'espace', 'sous-marin', 'métro', 'train', 'avion', 'voiture', 'route', 'rue',
+      'vaisseau spatial', 'ovni', 'mars', 'lune', 'planète', 'galaxie', 'univers',
+      'fusée', 'navette', 'station', 'satellite'
     ],
     de: [
       'haus', 'gebäude', 'stadt', 'berg', 'berge', 'ozean', 'meer', 
       'strand', 'wald', 'dschungel', 'wüste', 'fluss', 'see', 'insel', 
       'höhle', 'schloss', 'schule', 'büro', 'krankenhaus', 'kirche', 'park', 'garten',
-      'himmel', 'weltraum', 'unterwasser', 'u-bahn', 'zug', 'flugzeug', 'auto', 'straße', 'weg'
+      'himmel', 'weltraum', 'unterwasser', 'u-bahn', 'zug', 'flugzeug', 'auto', 'straße', 'weg',
+      'raumschiff', 'ufo', 'mars', 'mond', 'planet', 'galaxie', 'universum',
+      'rakete', 'shuttle', 'station', 'satellit'
     ]
   },
   actions: {
@@ -51,13 +61,16 @@ const tagCategories: TagCategories = {
       'flying', 'falling', 'running', 'swimming', 'walking', 'jumping', 'climbing',
       'fighting', 'hiding', 'escaping', 'chasing', 'searching', 'finding', 'losing',
       'talking', 'singing', 'dancing', 'eating', 'drinking', 'sleeping', 'waking',
-      'traveling', 'driving', 'riding', 'sailing', 'diving', 'floating'
+      'traveling', 'driving', 'riding', 'sailing', 'diving', 'floating', 'exploring',
+      'spaceflight', 'journeying', 'teleporting', 'landing', 'launching', 'hovering', 'floating'
     ],
     it: [
-      'volare', 'cadere', 'correre', 'nuotare', 'camminare', 'saltare', 'arrampicare',
-      'combattere', 'nascondere', 'fuggire', 'inseguire', 'cercare', 'trovare', 'perdere',
-      'parlare', 'cantare', 'ballare', 'mangiare', 'bere', 'dormire', 'svegliare',
-      'viaggiare', 'guidare', 'cavalcare', 'navigare', 'tuffare', 'galleggiare'
+      'volare', 'volavo', 'volando', 'cadere', 'correre', 'nuotare', 'camminare', 
+      'saltare', 'arrampicare', 'combattere', 'nascondere', 'fuggire', 'inseguire', 
+      'cercare', 'trovare', 'perdere', 'parlare', 'cantare', 'ballare', 'mangiare', 
+      'bere', 'dormire', 'svegliare', 'viaggiare', 'viaggiando', 'guidare', 'cavalcare', 
+      'navigare', 'tuffare', 'galleggiare', 'esplorare', 'esplorando', 'astronavigare', 
+      'teletrasportare', 'atterrare', 'lanciare', 'sospendere', 'fluttuare', 'andare'
     ],
     es: [
       'volar', 'caer', 'correr', 'nadar', 'caminar', 'saltar', 'escalar',
@@ -110,13 +123,13 @@ const tagCategories: TagCategories = {
       'family', 'friend', 'stranger', 'monster', 'animal', 'dog', 'cat', 'bird',
       'snake', 'spider', 'insect', 'bear', 'wolf', 'lion', 'tiger', 'fish', 'shark',
       'human', 'child', 'adult', 'mother', 'father', 'sister', 'brother',
-      'ghost', 'spirit', 'angel', 'demon', 'alien', 'robot', 'zombie'
+      'ghost', 'spirit', 'angel', 'demon', 'alien', 'aliens', 'extraterrestrial', 'robot', 'astronaut', 'zombie'
     ],
     it: [
       'famiglia', 'amico', 'sconosciuto', 'mostro', 'animale', 'cane', 'gatto', 'uccello',
       'serpente', 'ragno', 'insetto', 'orso', 'lupo', 'leone', 'tigre', 'pesce', 'squalo',
       'umano', 'bambino', 'adulto', 'madre', 'padre', 'sorella', 'fratello',
-      'fantasma', 'spirito', 'angelo', 'demone', 'alieno', 'robot', 'zombi'
+      'fantasma', 'spirito', 'angelo', 'demone', 'alieno', 'alieni', 'extraterrestre', 'robot', 'astronauta', 'zombi'
     ],
     es: [
       'familia', 'amigo', 'extraño', 'monstruo', 'animal', 'perro', 'gato', 'pájaro',
@@ -233,6 +246,9 @@ export async function generateTags(content: string, language: string): Promise<s
   // Use a Set to avoid duplicate tags
   const tagsSet = new Set<string>();
   
+  // Tag scoring system to prioritize better matches
+  const tagScores: Record<string, number> = {};
+  
   // Get category representatives (one tag per category to ensure diversity)
   const categoryTags: Record<string, string[]> = {
     places: [],
@@ -247,71 +263,154 @@ export async function generateTags(content: string, language: string): Promise<s
   if (keywordCategoriesByLang[langCode]) {
     const keywordMap = keywordCategoriesByLang[langCode];
     
-    // First pass: match whole words with boundaries
+    // First pass: exact phrase match (highest priority)
     keywordMap.forEach((category, keyword) => {
       try {
-        // Simple approach that works in all browsers
-        const regex = new RegExp(`(^|\\W)${keyword}(\\W|$)`, 'i');
-        if (regex.test(normalizedContent)) {
-          // Add to category-specific array
+        // Check for exact phrase match
+        if (normalizedContent.includes(` ${keyword} `) || 
+            normalizedContent.startsWith(`${keyword} `) || 
+            normalizedContent.endsWith(` ${keyword}`) || 
+            normalizedContent === keyword) {
+          // Add to category-specific array with high score
           categoryTags[category].push(keyword);
           tagsSet.add(keyword);
+          tagScores[keyword] = 10; // Higher score for exact matches
         }
       } catch (e) {
-        // In case of regex compilation error, fall back to simple includes
-        if (normalizedContent.includes(keyword)) {
-          categoryTags[category].push(keyword);
-          tagsSet.add(keyword);
+        // Error handling fallback - should never happen with this approach
+        console.error("Error in exact phrase matching:", e);
+      }
+    });
+    
+    // Second pass: word boundary match
+    keywordMap.forEach((category, keyword) => {
+      if (!tagsSet.has(keyword)) { // Skip if already added
+        try {
+          // Word boundary regex
+          const regex = new RegExp(`(^|\\W)${keyword}(\\W|$)`, 'i');
+          if (regex.test(normalizedContent)) {
+            categoryTags[category].push(keyword);
+            tagsSet.add(keyword);
+            tagScores[keyword] = 8; // Good score for word boundary matches
+          }
+        } catch (e) {
+          // In case of regex compilation error, fall back to includes for short keywords
+          if (keyword.length <= 4 && normalizedContent.includes(` ${keyword} `)) {
+            categoryTags[category].push(keyword);
+            tagsSet.add(keyword);
+            tagScores[keyword] = 6;
+          }
         }
       }
     });
     
-    // Second pass: match substrings for longer keywords (at least 5 chars)
-    if (tagsSet.size < 3 && normalizedContent.length > 50) {
+    // Third pass: partial word match for longer words (for handling conjugations, plurals, etc.)
+    if (tagsSet.size < 5) {
       keywordMap.forEach((category, keyword) => {
-        if (keyword.length >= 5 && normalizedContent.includes(keyword) && !tagsSet.has(keyword)) {
-          categoryTags[category].push(keyword);
-          tagsSet.add(keyword);
+        // Only consider keywords with 5+ characters for partial matching
+        // and only if we haven't already added this keyword
+        if (keyword.length >= 5 && !tagsSet.has(keyword)) {
+          // For Italian verbs, check common conjugation patterns
+          if (langCode === 'it' && category === 'actions') {
+            // Check for common verb conjugations in Italian
+            // Examples: volare -> volavo, volando, vola, etc.
+            const wordRoot = keyword.substring(0, keyword.length - 3); // Remove 'are', 'ere', 'ire'
+            if (wordRoot.length >= 3) {
+              const conjugationRegex = new RegExp(`\\b${wordRoot}[a-z]{1,5}\\b`, 'i');
+              if (conjugationRegex.test(normalizedContent)) {
+                categoryTags[category].push(keyword);
+                tagsSet.add(keyword);
+                tagScores[keyword] = 7; // Good score for conjugation matches
+                return; // Skip the standard substring check
+              }
+            }
+          }
+          
+          // For plurals and general partial matches
+          if (normalizedContent.includes(keyword.substring(0, keyword.length - 1))) {
+            categoryTags[category].push(keyword);
+            tagsSet.add(keyword);
+            tagScores[keyword] = 5; // Lower score for partial matches
+          }
         }
       });
+    }
+    
+    // Fourth pass: context-aware special cases based on combinations of words
+    if (normalizedContent.includes('astronave') || normalizedContent.includes('navicella')) {
+      // These often go together
+      if (!tagsSet.has('astronave')) {
+        categoryTags['places'].push('astronave');
+        tagsSet.add('astronave');
+        tagScores['astronave'] = 9;
+      }
+      
+      // If we mention spacecraft, we might be dealing with aliens
+      if (!tagsSet.has('alieno') && normalizedContent.match(/\b(alien|extraterr|marz)/i)) {
+        categoryTags['characters'].push('alieno');
+        tagsSet.add('alieno');
+        tagScores['alieno'] = 8;
+      }
+    }
+    
+    // If we see "andare" or "andavamo" with "marte", add "spazio" as a tag
+    if ((normalizedContent.includes('andare') || normalizedContent.includes('andavamo') || 
+         normalizedContent.includes('andando')) && 
+        (normalizedContent.includes('marte') || normalizedContent.includes('pianeta'))) {
+      if (!tagsSet.has('spazio')) {
+        categoryTags['places'].push('spazio');
+        tagsSet.add('spazio');
+        tagScores['spazio'] = 9;
+      }
     }
   }
   
   // Look for English tags as a fallback if we don't have enough
-  if (langCode !== 'en' && tagsSet.size < 3) {
+  if (langCode !== 'en' && tagsSet.size < 4) {
     const englishKeywordMap = keywordCategoriesByLang['en'];
     
     englishKeywordMap.forEach((category, keyword) => {
-      try {
-        const regex = new RegExp(`(^|\\W)${keyword}(\\W|$)`, 'i');
-        if (regex.test(normalizedContent) && !tagsSet.has(keyword)) {
-          categoryTags[category].push(keyword);
-          tagsSet.add(keyword);
-        }
-      } catch (e) {
-        // Fallback
-        if (normalizedContent.includes(keyword) && !tagsSet.has(keyword)) {
-          categoryTags[category].push(keyword);
-          tagsSet.add(keyword);
+      if (!tagsSet.has(keyword)) { // Skip if already added in native language
+        try {
+          const regex = new RegExp(`(^|\\W)${keyword}(\\W|$)`, 'i');
+          if (regex.test(normalizedContent)) {
+            categoryTags[category].push(keyword);
+            tagsSet.add(keyword);
+            tagScores[keyword] = 4; // Lower score for English fallbacks
+          }
+        } catch (e) {
+          // Fallback
+          if (normalizedContent.includes(keyword)) {
+            categoryTags[category].push(keyword);
+            tagsSet.add(keyword);
+            tagScores[keyword] = 3;
+          }
         }
       }
     });
   }
   
-  // Select the best tags, prioritizing category diversity
+  // Select the best tags, prioritizing category diversity and scores
   const prioritizedTags: string[] = [];
   
-  // Take one tag from each category that has tags
+  // Sort keywords in each category by score
   for (const category of Object.keys(categoryTags)) {
     if (categoryTags[category].length > 0) {
-      // Take the first tag from this category
+      // Sort tags within each category by score (highest first)
+      categoryTags[category].sort((a, b) => (tagScores[b] || 0) - (tagScores[a] || 0));
+      
+      // Take the highest-scoring tag from this category
       prioritizedTags.push(categoryTags[category][0]);
     }
   }
   
   // Add remaining tags if we don't have enough
   if (prioritizedTags.length < 5) {
-    const remainingTags = Array.from(tagsSet).filter(tag => !prioritizedTags.includes(tag));
+    // Get all remaining tags, sorted by score
+    const remainingTags = Array.from(tagsSet)
+      .filter(tag => !prioritizedTags.includes(tag))
+      .sort((a, b) => (tagScores[b] || 0) - (tagScores[a] || 0));
+    
     prioritizedTags.push(...remainingTags.slice(0, 5 - prioritizedTags.length));
   }
   
