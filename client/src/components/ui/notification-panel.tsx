@@ -31,6 +31,7 @@ type Notification = {
   type: "like" | "comment" | "message";
   userId: number;
   username: string;
+  profileImage?: string | null;
   dreamId?: number;
   dreamTitle?: string;
   chatId?: number;
@@ -374,6 +375,8 @@ export function NotificationPanel({
                       >
                         <PixelAvatar
                           id={notification.userId % 6}
+                          profileImage={notification.profileImage}
+                          username={notification.username}
                           size="md"
                           className="flex-shrink-0"
                         />
