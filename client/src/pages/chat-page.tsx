@@ -34,14 +34,18 @@ type ChatMatch = {
 };
 
 export default function ChatPage() {
+  // UI state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [match, params] = useRoute("/chat/:matchId");
-  const matchId = match ? parseInt(params.matchId) : undefined;
   const [highlightedMessageId, setHighlightedMessageId] = useState<number | null>(null);
   
+  // Refs
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Hooks
+  const [match, params] = useRoute("/chat/:matchId");
+  const matchId = match ? parseInt(params.matchId) : undefined;
   const { user } = useAuth();
   const { send, lastMessage, readyState } = useWebSocket();
   const { toast } = useToast();

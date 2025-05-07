@@ -34,6 +34,7 @@ type Notification = {
   dreamId?: number;
   dreamTitle?: string;
   chatId?: number;
+  commentId?: number;  // ID del commento, utile per la navigazione diretta al commento
   content?: string;
   createdAt: string;
   read: boolean;
@@ -138,10 +139,37 @@ export function NotificationPanel({
     }
   }, [unreadCount, onNotificationUpdate]);
 
+  // Ottiene l'URL di destinazione per una notifica
+  const getNotificationUrl = (notification: Notification) => {
+    switch (notification.type) {
+      case "like":
+        if (notification.dreamId) {
+          return `/dreams/${notification.dreamId}?highlight=like&userId=${notification.userId}`;
+        }
+        return '/';
+      case "comment":
+        if (notification.dreamId) {
+          return `/dreams/${notification.dreamId}?highlight=comment&userId=${notification.userId}${notification.commentId ? `&commentId=${notification.commentId}` : ''}`;
+        }
+        return '/';
+      case "message":
+        if (notification.chatId) {
+          return `/chat/${notification.chatId}?highlight=message&userId=${notification.userId}${notification.content ? `&messageId=${notification.content}` : ''}`;
+        }
+        return '/chat';
+      default:
+        return '/';
+    }
+  };
+
   // Gestisce il clic su una notifica
   const handleNotificationClick = (notification: Notification) => {
     // Segna la notifica come letta
     markAsRead(notification.id);
+    
+    // Naviga all'URL appropriato
+    window.location.href = getNotificationUrl(notification);
+    
     onClose();
   };
 
@@ -247,20 +275,7 @@ export function NotificationPanel({
     }
   };
 
-  // Ottiene l'URL a cui reindirizzare quando si clicca sulla notifica
-  const getNotificationUrl = (notification: Notification) => {
-    switch (notification.type) {
-      case "like":
-        return `/dreams/${notification.dreamId}?highlight=like&userId=${notification.userId}`;
-      case "comment":
-        // Se c'è un ID specifico del commento, possiamo aggiungerlo alla query
-        return `/dreams/${notification.dreamId}?highlight=comment&userId=${notification.userId}${notification.id ? `&commentId=${notification.id}` : ''}`;
-      case "message":
-        return `/chat/${notification.chatId}?highlight=message&userId=${notification.userId}`;
-      default:
-        return "/";
-    }
-  };
+
 
   if (!isOpen) return null;
 
