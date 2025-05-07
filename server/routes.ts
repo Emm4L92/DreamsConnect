@@ -574,6 +574,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New matches (for notification)
+  app.get("/api/matches/new", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "You must be logged in to view new matches" });
+      }
+      
+      const userId = req.user.id;
+      
+      // Get recent matches (last 24 hours)
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const matchesResult = await storage.db
+        .select({
+          id: dreamMatches.id,
+          dreamId: dreamMatches.dreamId,
+          matchedDreamId: dreamMatches.matchedDreamId,
+          score: dreamMatches.score,
+          createdAt: dreamMatches.createdAt
+        })
+        .from(dreamMatches)
+        .innerJoin(dreams, eq(dreamMatches.dreamId, dreams.id))
+        .where(and(
+          eq(dreams.authorId, userId),
+          sql`${dreamMatches.createdAt} > ${yesterday}`
+        ));
+      
+      // Get match details
+      const matchPromises = matchesResult.map(async (match) => {
+        try {
+          // Gestione degli errori e valori nulli
+          const matchedDream = await storage.getDreamById(match.matchedDreamId);
+          if (!matchedDream) {
+            console.log(`[Match Notification] Matched dream ${match.matchedDreamId} not found, skipping`);
+            return null;
+          }
+          
+          const matchedUser = await storage.getUser(matchedDream.authorId);
+          if (!matchedUser) {
+            console.log(`[Match Notification] User ${matchedDream.authorId} not found, skipping`);
+            return null;
+          }
+          
+          // Get common tags
+          const dreamTags1 = await storage.db
+            .select()
+            .from(dreamTags)
+            .where(eq(dreamTags.dreamId, match.dreamId));
+          
+          const dreamTags2 = await storage.db
+            .select()
+            .from(dreamTags)
+            .where(eq(dreamTags.dreamId, match.matchedDreamId));
+          
+          const tags1 = new Set(dreamTags1.map(t => t.tag));
+          const commonTags = dreamTags2
+            .map(t => t.tag)
+            .filter(tag => tags1.has(tag));
+          
+          // Assicuriamoci che matchPercentage sia un numero intero valido
+          let matchPercentage = typeof match.score === 'number' ? match.score : 0;
+          if (isNaN(matchPercentage)) matchPercentage = 0;
+          
+          return {
+            id: match.id,
+            userId: matchedUser.id,
+            username: matchedUser.username,
+            dreamId: matchedDream.id,
+            dreamTitle: matchedDream.title,
+            matchPercentage: matchPercentage,
+            tag: commonTags.length > 0 ? commonTags[0] : 'dreams'
+          };
+        } catch (error) {
+          console.error(`[Match Notification] Error processing match ${match.id}:`, error);
+          return null;
+        }
+      });
+      
+      const newMatchesWithNulls = await Promise.all(matchPromises);
+      // Filtra null e undefined
+      const newMatches = newMatchesWithNulls.filter(Boolean);
+      
+      res.json(newMatches);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   app.get("/api/matches/:id", async (req, res, next) => {
     try {
       if (!req.isAuthenticated()) {
@@ -919,93 +1008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // New matches (for notification)
-  app.get("/api/matches/new", async (req, res, next) => {
-    try {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "You must be logged in to view new matches" });
-      }
-      
-      const userId = req.user.id;
-      
-      // Get recent matches (last 24 hours)
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      
-      const matchesResult = await storage.db
-        .select({
-          id: dreamMatches.id,
-          dreamId: dreamMatches.dreamId,
-          matchedDreamId: dreamMatches.matchedDreamId,
-          score: dreamMatches.score,
-          createdAt: dreamMatches.createdAt
-        })
-        .from(dreamMatches)
-        .innerJoin(dreams, eq(dreamMatches.dreamId, dreams.id))
-        .where(and(
-          eq(dreams.authorId, userId),
-          sql`${dreamMatches.createdAt} > ${yesterday}`
-        ));
-      
-      // Get match details
-      const matchPromises = matchesResult.map(async (match) => {
-        try {
-          // Gestione degli errori e valori nulli
-          const matchedDream = await storage.getDreamById(match.matchedDreamId);
-          if (!matchedDream) {
-            console.log(`[Match Notification] Matched dream ${match.matchedDreamId} not found, skipping`);
-            return null;
-          }
-          
-          const matchedUser = await storage.getUser(matchedDream.authorId);
-          if (!matchedUser) {
-            console.log(`[Match Notification] User ${matchedDream.authorId} not found, skipping`);
-            return null;
-          }
-          
-          // Get common tags
-          const dreamTags1 = await storage.db
-            .select()
-            .from(dreamTags)
-            .where(eq(dreamTags.dreamId, match.dreamId));
-          
-          const dreamTags2 = await storage.db
-            .select()
-            .from(dreamTags)
-            .where(eq(dreamTags.dreamId, match.matchedDreamId));
-          
-          const tags1 = new Set(dreamTags1.map(t => t.tag));
-          const commonTags = dreamTags2
-            .map(t => t.tag)
-            .filter(tag => tags1.has(tag));
-          
-          // Assicuriamoci che matchPercentage sia un numero intero valido
-          let matchPercentage = typeof match.score === 'number' ? match.score : 0;
-          
-          return {
-            id: match.id,
-            userId: matchedUser.id,
-            username: matchedUser.username,
-            dreamId: matchedDream.id,
-            dreamTitle: matchedDream.title,
-            matchPercentage: matchPercentage,
-            tag: commonTags.length > 0 ? commonTags[0] : 'dreams'
-          };
-        } catch (error) {
-          console.error(`[Match Notification] Error processing match ${match.id}:`, error);
-          return null;
-        }
-      });
-      
-      const newMatchesWithNulls = await Promise.all(matchPromises);
-      // Filtra null e undefined
-      const newMatches = newMatchesWithNulls.filter(Boolean);
-      
-      res.json(newMatches);
-    } catch (error) {
-      next(error);
-    }
-  });
+  // This endpoint was moved before /api/matches/:id to solve route conflicts
 
   return httpServer;
 }
