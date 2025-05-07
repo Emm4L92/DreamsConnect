@@ -250,10 +250,15 @@ export async function generateTags(content: string, language: string): Promise<s
   const langCode = matchLanguage(language);
   
   // Crea una versione pulita del testo
-  const cleanedContent = content
-    .replace(/[^\w\s\u00C0-\u017F]/g, ' ')
+  let cleanedContent = content
+    .replace(/[^\w\s\u00C0-\u017F]/g, ' ') // Rimuovi caratteri speciali
     .toLowerCase()
     .trim();
+    
+  // Pre-elaborazione avanzata per migliorare la qualità dei tag
+  cleanedContent = cleanedContent
+    .replace(/\s+/g, ' ') // Normalizza spazi multipli
+    .replace(/^\s*(ho|i|io|mi|me|he|she|it|we|they|gli|le|lo|la|il|l')\s+/gi, ''); // Rimuovi pronomi iniziali comuni
   
   // Estrai i candidati per i tag utilizzando diverse tecniche
   const tagCandidates = new Set<string>();
@@ -433,10 +438,27 @@ export async function generateTags(content: string, language: string): Promise<s
     // Per ogni stem, mantieni solo il termine con il punteggio più alto o più frequente
     for (const [stem, relatedTags] of Object.entries(stemMap)) {
       if (relatedTags.length > 1) {
-        // Ordina per punteggio
-        relatedTags.sort((a, b) => (tagScores[b] || 0) - (tagScores[a] || 0));
+        // Prima, preferisci i tag più corti (sono probabilmente parole singole vs. frasi)
+        relatedTags.sort((a, b) => {
+          // Priorità 1: Tag con meno spazi (parole singole)
+          const aSpaces = (a.match(/\s/g) || []).length;
+          const bSpaces = (b.match(/\s/g) || []).length;
+          if (aSpaces !== bSpaces) {
+            return aSpaces - bSpaces;
+          }
+          
+          // Priorità 2: Tag più corti per primi
+          const aLength = a.length;
+          const bLength = b.length;
+          if (aLength !== bLength) {
+            return aLength - bLength;
+          }
+          
+          // Priorità 3: Punteggio più alto
+          return (tagScores[b] || 0) - (tagScores[a] || 0);
+        });
         
-        // Mantieni solo il tag con il punteggio più alto
+        // Mantieni solo il tag migliore
         const bestTag = relatedTags[0];
         
         // Rimuovi gli altri dai candidati
@@ -452,40 +474,64 @@ export async function generateTags(content: string, language: string): Promise<s
     console.error('Stemming error:', error);
   }
   
-  // 7. Analisi della coesione semantica - limitata a frasi più corte e significative
+  // 7. Estrai coppie di parole significative (massimo 2 parole)
   try {
-    // Identifica gruppi di parole che potrebbero formare concetti coesi
-    const phrases = cleanedContent.split(/[,.!?;:]/g).filter(p => p.trim().length > 0);
+    // Tokenizza il contenuto in parole
+    const words = cleanedContent.split(/\s+/).filter(word => word.length > 3);
     
-    for (const phrase of phrases) {
-      // Limita a frasi di 2-3 parole per evitare frasi troppo lunghe
-      const words = phrase.split(/\s+/);
-      if (words.length >= 2 && words.length <= 3) {
-        // Questa è una frase di lunghezza ragionevole, potrebbe essere un concetto coeso
-        const normalizedPhrase = phrase.trim().toLowerCase();
-        
-        // Controlla se la frase contiene parti di tagCandidates già trovati
-        let containsCandidate = false;
-        const candidatesArray = Array.from(tagCandidates);
-        for (const candidate of candidatesArray) {
-          if (normalizedPhrase.includes(candidate)) {
-            containsCandidate = true;
-            break;
-          }
-        }
-        
-        // Se contiene candidati esistenti, potrebbe essere una frase significativa
-        if (containsCandidate) {
-          // Limita la lunghezza massima del tag significativamente
-          if (normalizedPhrase.length > 3 && normalizedPhrase.length < 20) {
-            tagCandidates.add(normalizedPhrase);
-            tagScores[normalizedPhrase] = 6; // Buon punteggio per frasi semanticamente coese
-          }
+    // Crea coppie di parole adiacenti (massimo 2 per coppia)
+    for (let i = 0; i < words.length - 1; i++) {
+      // Crea una coppia di due parole
+      const wordPair = `${words[i]} ${words[i+1]}`.trim().toLowerCase();
+      
+      // Assicurati che sia una coppia ragionevole e non troppo lunga
+      if (wordPair.length >= 5 && wordPair.length <= MAX_TAG_LENGTH) {
+        // Aggiungi solo se entrambe le parole sono significative
+        if (words[i].length > 3 && words[i+1].length > 3) {
+          tagCandidates.add(wordPair);
+          // Punteggio medio-alto per coppie di parole significative
+          tagScores[wordPair] = 5.5;
         }
       }
     }
   } catch (error) {
-    console.error('Semantic cohesion analysis error:', error);
+    console.error('Word pairing analysis error:', error);
+  }
+  
+  // 8. Rimuovi esplicitamente qualsiasi tag che sia una frase completa o quasi completa
+  try {
+    // Trova e rimuovi tag che contengono più di 3 parole o sono troppo lunghi
+    const candidatesArray = Array.from(tagCandidates);
+    for (const tag of candidatesArray) {
+      // Conta le parole
+      const wordCount = tag.split(/\s+/).length;
+      
+      // Se contiene troppe parole, rimuovilo
+      if (wordCount > 2) {
+        tagCandidates.delete(tag);
+        delete tagScores[tag];
+        continue;
+      }
+      
+      // Se è troppo lungo, rimuovilo
+      if (tag.length > MAX_TAG_LENGTH) {
+        tagCandidates.delete(tag);
+        delete tagScores[tag];
+        continue;
+      }
+      
+      // Se contiene congiunzioni o preposizioni comuni, probabilmente è una frase, rimuovilo
+      if (/\b(and|or|but|the|a|an|il|lo|la|gli|le|e|o|ma|un|una|di|da|in|con|su|per|tra|fra)\b/i.test(tag)) {
+        // Ma solo se sono singole parole, non parte di parole più grandi
+        const words = tag.split(/\s+/);
+        if (words.length > 1) {
+          tagCandidates.delete(tag);
+          delete tagScores[tag];
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Phrase filtering error:', error);
   }
 
   // Se non abbiamo abbastanza candidati, aggiungi termini comuni relativi ai sogni
@@ -502,8 +548,23 @@ export async function generateTags(content: string, language: string): Promise<s
   // Prendi i migliori 5 tag
   let finalTags = tagArray.slice(0, 5);
   
-  // Controllo finale di qualità: rimuovi tag con meno di 3 caratteri
-  finalTags = finalTags.filter(tag => tag.length >= 3);
+  // Controllo finale di qualità: 
+  // 1. Rimuovi tag con meno di 3 caratteri
+  // 2. Rimuovi tag più lunghi di MAX_TAG_LENGTH caratteri
+  // 3. Rimuovi tag che contengono più di 2 spazi (frasi lunghe)
+  finalTags = finalTags.filter(tag => {
+    // Tag troppo corti
+    if (tag.length < 3) return false;
+    
+    // Tag troppo lunghi
+    if (tag.length > MAX_TAG_LENGTH) return false;
+    
+    // Frasi troppo lunghe (contengono più di 2 parole)
+    const wordCount = tag.split(/\s+/).length;
+    if (wordCount > 2) return false;
+    
+    return true;
+  });
   
   // Se non abbiamo trovato tag, restituisci quelli generici
   if (finalTags.length === 0) {
