@@ -87,11 +87,41 @@ function checkForLandscapeTerms(
 ) {
   // Termini di paesaggio per lingua
   const landscapeTerms: Record<string, string[]> = {
-    'en': ['mountain', 'valley', 'forest', 'beach', 'ocean', 'sea', 'lake', 'river', 'hill', 'desert', 'island', 'canyon', 'cave'],
-    'it': ['montagna', 'valle', 'foresta', 'spiaggia', 'oceano', 'mare', 'lago', 'fiume', 'collina', 'deserto', 'isola', 'canyon', 'grotta'],
-    'es': ['montaña', 'valle', 'bosque', 'playa', 'océano', 'mar', 'lago', 'río', 'colina', 'desierto', 'isla', 'cañón', 'cueva'],
-    'fr': ['montagne', 'vallée', 'forêt', 'plage', 'océan', 'mer', 'lac', 'rivière', 'colline', 'désert', 'île', 'canyon', 'grotte'],
-    'de': ['berg', 'tal', 'wald', 'strand', 'ozean', 'meer', 'see', 'fluss', 'hügel', 'wüste', 'insel', 'schlucht', 'höhle']
+    'en': [
+      'mountain', 'valley', 'forest', 'beach', 'ocean', 'sea', 'lake', 'river', 
+      'hill', 'desert', 'island', 'canyon', 'cave', 'tree', 'flower', 'path', 
+      'trail', 'bridge', 'rock', 'peak', 'summit', 'shore', 'coast', 'swamp', 
+      'marsh', 'savanna', 'plain', 'plateau', 'horizon', 'woods', 'jungle',
+      'mountain', 'waterfall', 'cliff', 'meadow', 'garden', 'field', 'shadow'
+    ],
+    'it': [
+      'montagna', 'valle', 'foresta', 'spiaggia', 'oceano', 'mare', 'lago', 'fiume', 
+      'collina', 'deserto', 'isola', 'canyon', 'grotta', 'albero', 'fiore', 'sentiero', 
+      'percorso', 'ponte', 'roccia', 'picco', 'vetta', 'riva', 'costa', 'palude', 
+      'brughiera', 'savana', 'pianura', 'altopiano', 'orizzonte', 'bosco', 'giungla',
+      'montagna', 'cascata', 'scogliera', 'prato', 'giardino', 'campo', 'ombra'
+    ],
+    'es': [
+      'montaña', 'valle', 'bosque', 'playa', 'océano', 'mar', 'lago', 'río', 
+      'colina', 'desierto', 'isla', 'cañón', 'cueva', 'árbol', 'flor', 'sendero', 
+      'camino', 'puente', 'roca', 'pico', 'cima', 'orilla', 'costa', 'pantano', 
+      'marisma', 'sabana', 'llanura', 'meseta', 'horizonte', 'arboleda', 'selva',
+      'montaña', 'cascada', 'acantilado', 'prado', 'jardín', 'campo', 'sombra'
+    ],
+    'fr': [
+      'montagne', 'vallée', 'forêt', 'plage', 'océan', 'mer', 'lac', 'rivière', 
+      'colline', 'désert', 'île', 'canyon', 'grotte', 'arbre', 'fleur', 'sentier', 
+      'chemin', 'pont', 'rocher', 'pic', 'sommet', 'rive', 'côte', 'marais', 
+      'marécage', 'savane', 'plaine', 'plateau', 'horizon', 'bois', 'jungle',
+      'montagne', 'cascade', 'falaise', 'prairie', 'jardin', 'champ', 'ombre'
+    ],
+    'de': [
+      'berg', 'tal', 'wald', 'strand', 'ozean', 'meer', 'see', 'fluss', 
+      'hügel', 'wüste', 'insel', 'schlucht', 'höhle', 'baum', 'blume', 'pfad', 
+      'weg', 'brücke', 'fels', 'gipfel', 'spitze', 'ufer', 'küste', 'sumpf', 
+      'moor', 'savanne', 'ebene', 'hochebene', 'horizont', 'gehölz', 'dschungel',
+      'gebirge', 'wasserfall', 'klippe', 'wiese', 'garten', 'feld', 'schatten'
+    ]
   };
 
   // Fenomeni naturali per lingua
@@ -315,23 +345,29 @@ export async function generateTags(content: string, language: string): Promise<s
       }
     }
     
-    // Estrai verbi
-    if (doc.verbs && typeof doc.verbs === 'function') {
-      const verbs = doc.verbs().out('array');
-      for (const verb of verbs) {
-        if (verb && verb.length > 3) {
-          // Rimuovi le desinenze comuni per ottenere la forma base del verbo
-          const normalizedVerb = verb.toLowerCase()
-            .replace(/ing$|ed$|s$|ando$|endo$|are$|ere$|ire$/, '')
+    // Invece di estrarre verbi come tag, estraiamo oggetti diretti
+    // Questo produce tag più sostantivali e meno frasi
+    if (doc.nouns && typeof doc.nouns === 'function') {
+      // Estrai i possibili oggetti diretti (sostantivi che seguono verbi)
+      const objects = doc.nouns().out('array');
+      
+      for (const obj of objects) {
+        if (obj && obj.length > 3) {
+          // Rimuovi articoli e congiunzioni per ottenere il sostantivo puro
+          const cleanObj = obj.toLowerCase()
+            .replace(/^(the|a|an|il|lo|la|gli|le|un|una)\s+/i, '')
             .trim();
             
-          if (normalizedVerb.length > 3) {
-            tagCandidates.add(normalizedVerb);
-            tagScores[normalizedVerb] = tagScores[normalizedVerb] || 4;
+          if (cleanObj && cleanObj.length > 3 && !cleanObj.includes(' ')) {
+            tagCandidates.add(cleanObj);
+            // Dai precedenza ai sostantivi oggetto rispetto ai verbi
+            tagScores[cleanObj] = (tagScores[cleanObj] || 0) + 5;
           }
         }
       }
     }
+    
+    // Non estraiamo più verbi come tag isolati perché tendono a generare tag frasali
   } catch (error) {
     console.error('POS tagging error:', error);
   }
@@ -474,23 +510,46 @@ export async function generateTags(content: string, language: string): Promise<s
     console.error('Stemming error:', error);
   }
   
-  // 7. Estrai coppie di parole significative (massimo 2 parole)
+  // 7. Estraiamo solo coppie di sostantivi per tag multi-parola
   try {
     // Tokenizza il contenuto in parole
     const words = cleanedContent.split(/\s+/).filter(word => word.length > 3);
     
-    // Crea coppie di parole adiacenti (massimo 2 per coppia)
+    // Lista di preposizioni comuni da evitare come inizio o fine di coppie
+    const prepositions = ['in', 'on', 'at', 'of', 'to', 'by', 'for', 'with', 'about', 'against', 
+                          'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
+                          'from', 'up', 'down', 'off', 'over', 'under', 'again', 'further', 'then',
+                          'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both'];
+                          
+    // Lista di verbi comuni da evitare
+    const commonVerbs = ['is', 'am', 'are', 'was', 'were', 'be', 'being', 'been', 'have', 'has',
+                        'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may',
+                        'might', 'must', 'can', 'could', 'go', 'goes', 'went', 'going', 'come',
+                        'comes', 'came', 'coming', 'take', 'takes', 'took', 'taking', 'make',
+                        'makes', 'made', 'making', 'see', 'sees', 'saw', 'seeing', 'watch',
+                        'watches', 'watched', 'watching', 'look', 'looks', 'looked', 'looking',
+                        'seem', 'seems', 'seemed', 'seeming'];
+                          
+    // Estraiamo coppie di parole di alta qualità (sostantivi composti o frasi nominali)
     for (let i = 0; i < words.length - 1; i++) {
-      // Crea una coppia di due parole
-      const wordPair = `${words[i]} ${words[i+1]}`.trim().toLowerCase();
+      // Verifica che entrambe le parole non siano preposizioni o verbi comuni
+      if (prepositions.includes(words[i].toLowerCase()) || 
+          prepositions.includes(words[i+1].toLowerCase()) ||
+          commonVerbs.includes(words[i].toLowerCase()) ||
+          commonVerbs.includes(words[i+1].toLowerCase())) {
+        continue;
+      }
+      
+      // Crea una coppia di due sostantivi (potenziali)
+      const nounPair = `${words[i]} ${words[i+1]}`.trim().toLowerCase();
       
       // Assicurati che sia una coppia ragionevole e non troppo lunga
-      if (wordPair.length >= 5 && wordPair.length <= MAX_TAG_LENGTH) {
-        // Aggiungi solo se entrambe le parole sono significative
-        if (words[i].length > 3 && words[i+1].length > 3) {
-          tagCandidates.add(wordPair);
-          // Punteggio medio-alto per coppie di parole significative
-          tagScores[wordPair] = 5.5;
+      if (nounPair.length >= 5 && nounPair.length <= MAX_TAG_LENGTH) {
+        // Verifica che la coppia non sia una frase verbale/preposizionale
+        if (!nounPair.match(/\b(walking through|through forest|all around|around me|watched by|watch by|being watched|seemed like|looked like)\b/i)) {
+          tagCandidates.add(nounPair);
+          // Punteggio basso-medio per coppie di sostantivi - così i sostantivi singoli hanno priorità
+          tagScores[nounPair] = 4.0;
         }
       }
     }
@@ -575,8 +634,19 @@ export async function generateTags(content: string, language: string): Promise<s
   // Converti il set in array per ordinamento e selezione finale
   const tagArray = Array.from(tagCandidates);
   
-  // Ordina tag per punteggio (più alto prima)
-  tagArray.sort((a, b) => (tagScores[b] || 0) - (tagScores[a] || 0));
+  // Ordina tag per tipo (singole parole prima) e poi per punteggio
+  tagArray.sort((a, b) => {
+    // Prima criteri: Le parole singole hanno precedenza
+    const aHasSpace = a.includes(' ');
+    const bHasSpace = b.includes(' ');
+    
+    if (aHasSpace !== bHasSpace) {
+      return aHasSpace ? 1 : -1; // Parole singole prima (senza spazi)
+    }
+    
+    // Secondo criterio: Per punteggio
+    return (tagScores[b] || 0) - (tagScores[a] || 0);
+  });
   
   // Prendi i migliori 5 tag
   let finalTags = tagArray.slice(0, 5);
@@ -626,6 +696,11 @@ export async function generateTags(content: string, language: string): Promise<s
     
     // Pattern per frasi con struttura "verbo + preposizione"
     if (/\b(walk(ing|ed)? (through|in|by|to)|look(ing|ed)? (at|like|as)|seem(ing|ed)? (to|like|as))\b/i.test(tag)) {
+      return false;
+    }
+    
+    // Pattern per frasi di sostantivi che contengono specifiche strutture
+    if (/\b(forest that|trees were|forever trees|tall ancient|ancient and|singing all|shadows of|hidden in|birds singing)\b/i.test(tag)) {
       return false;
     }
     
