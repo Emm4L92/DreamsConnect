@@ -27,6 +27,7 @@ type ChatMatch = {
   user: {
     id: number;
     username: string;
+    profileImage?: string | null;
     avatarId: number;
   };
   dreamId: number;
@@ -165,7 +166,11 @@ export default function ChatPage() {
                           m.id === matchId ? 'bg-gray-100 border-2 border-black' : ''
                         }`}
                       >
-                        <PixelAvatar id={m.user.avatarId} />
+                        <PixelAvatar 
+                          id={m.user.avatarId} 
+                          profileImage={m.user.profileImage}
+                          username={m.user.username}
+                        />
                         <div>
                           <p className="font-medium">{m.user.username}</p>
                           <p className="text-xs text-gray-500 truncate max-w-[150px]">
@@ -193,7 +198,11 @@ export default function ChatPage() {
                 <CardHeader className="border-b-2 border-black">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <PixelAvatar id={matchData.user.avatarId} />
+                      <PixelAvatar 
+                        id={matchData.user.avatarId} 
+                        profileImage={matchData.user.profileImage}
+                        username={matchData.user.username}
+                      />
                       <div>
                         <CardTitle>{matchData.user.username}</CardTitle>
                         <p className="text-xs text-gray-500">

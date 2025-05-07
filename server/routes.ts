@@ -541,7 +541,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get author information
       if (dreamMap.size > 0) {
         const authorResult = await storage.db
-          .select({ id: users.id, username: users.username })
+          .select({ 
+            id: users.id, 
+            username: users.username,
+            profileImage: users.profileImage
+          })
           .from(users)
           .where(eq(users.id, userId))
           .limit(1);
@@ -550,7 +554,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const dream of dreamMap.values()) {
             dream.author = {
               id: authorResult[0].id,
-              username: authorResult[0].username
+              username: authorResult[0].username,
+              profileImage: authorResult[0].profileImage
             };
           }
         }
@@ -644,7 +649,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user: {
             id: matchedUser.id,
             username: matchedUser.username,
-            avatarId: matchedUser.id % 6 // Simple way to get consistent avatar
+            profileImage: matchedUser.profileImage,
+            avatarId: matchedUser.id % 6 // Fallback avatar
           },
           dreamId: matchedDream.id,
           dreamTitle: matchedDream.title,
@@ -727,6 +733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: match.id,
             userId: matchedUser.id,
             username: matchedUser.username,
+            profileImage: matchedUser.profileImage,
             dreamId: matchedDream.id,
             dreamTitle: matchedDream.title,
             matchPercentage: matchPercentage,
@@ -804,6 +811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: {
           id: otherUser.id,
           username: otherUser.username,
+          profileImage: otherUser.profileImage,
           avatarId: otherUser.id % 6
         },
         dreamId: otherDream.id,
