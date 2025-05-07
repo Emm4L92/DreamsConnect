@@ -12,6 +12,9 @@ import keywordExtractor from 'keyword-extractor';
 const tokenizer = new natural.WordTokenizer();
 const stemmer = natural.PorterStemmer;
 
+// LUNGHEZZA MASSIMA ASSOLUTA PER QUALSIASI TAG
+const MAX_TAG_LENGTH = 18; // Nessun tag più lungo di 18 caratteri
+
 // Lingue supportate
 const supportedLanguages = ['en', 'it', 'es', 'fr', 'de'];
 
@@ -70,6 +73,137 @@ function matchLanguage(lang: string): string {
 }
 
 /**
+ * Controllo per elementi paesaggistici e naturali nei sogni
+ * @param content Testo del sogno
+ * @param tagSet Set di candidati tag da aggiornare
+ * @param scoreMap Mappa dei punteggi da aggiornare
+ * @param language Lingua del contenuto
+ */
+function checkForLandscapeTerms(
+  content: string,
+  tagSet: Set<string>,
+  scoreMap: Record<string, number>,
+  language: string
+) {
+  // Termini di paesaggio per lingua
+  const landscapeTerms: Record<string, string[]> = {
+    'en': ['mountain', 'valley', 'forest', 'beach', 'ocean', 'sea', 'lake', 'river', 'hill', 'desert', 'island', 'canyon', 'cave'],
+    'it': ['montagna', 'valle', 'foresta', 'spiaggia', 'oceano', 'mare', 'lago', 'fiume', 'collina', 'deserto', 'isola', 'canyon', 'grotta'],
+    'es': ['montaña', 'valle', 'bosque', 'playa', 'océano', 'mar', 'lago', 'río', 'colina', 'desierto', 'isla', 'cañón', 'cueva'],
+    'fr': ['montagne', 'vallée', 'forêt', 'plage', 'océan', 'mer', 'lac', 'rivière', 'colline', 'désert', 'île', 'canyon', 'grotte'],
+    'de': ['berg', 'tal', 'wald', 'strand', 'ozean', 'meer', 'see', 'fluss', 'hügel', 'wüste', 'insel', 'schlucht', 'höhle']
+  };
+
+  // Fenomeni naturali per lingua
+  const naturalPhenomenaTerms: Record<string, string[]> = {
+    'en': ['sky', 'sun', 'rain', 'wind', 'storm', 'thunder', 'lightning', 'cloud', 'snow', 'rainbow', 'fog', 'mist'],
+    'it': ['cielo', 'sole', 'pioggia', 'vento', 'tempesta', 'tuono', 'fulmine', 'nuvola', 'neve', 'arcobaleno', 'nebbia', 'foschia'],
+    'es': ['cielo', 'sol', 'lluvia', 'viento', 'tormenta', 'trueno', 'relámpago', 'nube', 'nieve', 'arcoíris', 'niebla', 'bruma'],
+    'fr': ['ciel', 'soleil', 'pluie', 'vent', 'orage', 'tonnerre', 'éclair', 'nuage', 'neige', 'arc-en-ciel', 'brouillard', 'brume'],
+    'de': ['himmel', 'sonne', 'regen', 'wind', 'sturm', 'donner', 'blitz', 'wolke', 'schnee', 'regenbogen', 'nebel', 'dunst']
+  };
+
+  // Termini emotivi/sensoriali nei sogni
+  const emotionalTerms: Record<string, string[]> = {
+    'en': ['peace', 'fear', 'joy', 'sadness', 'anger', 'surprise', 'freedom', 'trapped', 'floating', 'falling'],
+    'it': ['pace', 'paura', 'gioia', 'tristezza', 'rabbia', 'sorpresa', 'libertà', 'intrappolato', 'galleggiante', 'cadere'],
+    'es': ['paz', 'miedo', 'alegría', 'tristeza', 'ira', 'sorpresa', 'libertad', 'atrapado', 'flotante', 'caer'],
+    'fr': ['paix', 'peur', 'joie', 'tristesse', 'colère', 'surprise', 'liberté', 'piégé', 'flottant', 'tomber'],
+    'de': ['frieden', 'angst', 'freude', 'traurigkeit', 'wut', 'überraschung', 'freiheit', 'gefangen', 'schwebend', 'fallen']
+  };
+
+  // Normalizza e tokenizza il contenuto
+  const normalizedContent = content.toLowerCase();
+  
+  // Controlla paesaggi
+  const landscapesToCheck = landscapeTerms[language] || landscapeTerms['en'];
+  for (const term of landscapesToCheck) {
+    // Controllo con word boundary per evitare falsi positivi
+    const regex = new RegExp(`\\b${term}\\b`, 'i');
+    if (regex.test(normalizedContent)) {
+      tagSet.add(term);
+      scoreMap[term] = 8.5; // Punteggio alto per paesaggi
+    }
+  }
+  
+  // Controlla fenomeni naturali
+  const phenomenaToCheck = naturalPhenomenaTerms[language] || naturalPhenomenaTerms['en'];
+  for (const term of phenomenaToCheck) {
+    const regex = new RegExp(`\\b${term}\\b`, 'i');
+    if (regex.test(normalizedContent)) {
+      tagSet.add(term);
+      scoreMap[term] = 7.5; // Punteggio abbastanza alto
+    }
+  }
+  
+  // Controlla termini emotivi
+  const emotionsToCheck = emotionalTerms[language] || emotionalTerms['en'];
+  for (const term of emotionsToCheck) {
+    const regex = new RegExp(`\\b${term}\\b`, 'i');
+    if (regex.test(normalizedContent)) {
+      tagSet.add(term);
+      scoreMap[term] = 7; // Punteggio medio-alto
+    }
+  }
+}
+
+/**
+ * Controllo per termini astronomici ed elementi spaziali nei sogni
+ * @param content Testo del sogno
+ * @param tagSet Set di candidati tag da aggiornare
+ * @param scoreMap Mappa dei punteggi da aggiornare
+ * @param language Lingua del contenuto
+ */
+function checkForAstronomicalTerms(
+  content: string,
+  tagSet: Set<string>,
+  scoreMap: Record<string, number>,
+  language: string
+) {
+  // Termini astronomici per lingua
+  const astronomicalTerms: Record<string, string[]> = {
+    'en': ['moon', 'mars', 'planet', 'star', 'galaxy', 'universe', 'space', 'orbit', 'sun'],
+    'it': ['luna', 'marte', 'pianeta', 'stella', 'galassia', 'universo', 'spazio', 'orbita', 'sole'],
+    'es': ['luna', 'marte', 'planeta', 'estrella', 'galaxia', 'universo', 'espacio', 'órbita', 'sol'],
+    'fr': ['lune', 'mars', 'planète', 'étoile', 'galaxie', 'univers', 'espace', 'orbite', 'soleil'],
+    'de': ['mond', 'mars', 'planet', 'stern', 'galaxie', 'universum', 'weltraum', 'umlaufbahn', 'sonne']
+  };
+
+  // Veicoli spaziali per lingua
+  const spacecraftTerms: Record<string, string[]> = {
+    'en': ['spaceship', 'rocket', 'spacecraft', 'ufo', 'shuttle'],
+    'it': ['astronave', 'razzo', 'navicella', 'ufo', 'navetta'],
+    'es': ['nave espacial', 'cohete', 'nave', 'ovni', 'transbordador'],
+    'fr': ['vaisseau spatial', 'fusée', 'navette', 'ovni', 'navette spatiale'],
+    'de': ['raumschiff', 'rakete', 'raumfähre', 'ufo', 'shuttle']
+  };
+
+  // Normalizza e tokenizza il contenuto
+  const normalizedContent = content.toLowerCase();
+  
+  // Controlla termini astronomici
+  const termsToCheck = astronomicalTerms[language] || astronomicalTerms['en'];
+  for (const term of termsToCheck) {
+    // Controllo con word boundary per evitare falsi positivi
+    const regex = new RegExp(`\\b${term}\\b`, 'i');
+    if (regex.test(normalizedContent)) {
+      tagSet.add(term);
+      scoreMap[term] = 9; // Punteggio molto alto per termini astronomici
+    }
+  }
+  
+  // Controlla veicoli spaziali
+  const spacecraftToCheck = spacecraftTerms[language] || spacecraftTerms['en'];
+  for (const term of spacecraftToCheck) {
+    const regex = new RegExp(`\\b${term}\\b`, 'i');
+    if (regex.test(normalizedContent)) {
+      tagSet.add(term);
+      scoreMap[term] = 8; // Punteggio alto per veicoli spaziali
+    }
+  }
+}
+
+/**
  * Aggiungi termini comuni relativi ai sogni come tag di fallback
  * @param tagSet Set di candidati tag da aumentare
  * @param scoreMap Mappa dei punteggi da aggiornare
@@ -124,6 +258,12 @@ export async function generateTags(content: string, language: string): Promise<s
   // Estrai i candidati per i tag utilizzando diverse tecniche
   const tagCandidates = new Set<string>();
   const tagScores: Record<string, number> = {};
+  
+  // Rileva elementi di paesaggio e natura prima di tutto
+  checkForLandscapeTerms(cleanedContent, tagCandidates, tagScores, langCode);
+  
+  // Rileva termini astronomici
+  checkForAstronomicalTerms(cleanedContent, tagCandidates, tagScores, langCode);
 
   // 1. Riconoscimento delle entità con compromise
   try {
@@ -312,13 +452,15 @@ export async function generateTags(content: string, language: string): Promise<s
     console.error('Stemming error:', error);
   }
   
-  // 7. Analisi della coesione semantica
+  // 7. Analisi della coesione semantica - limitata a frasi più corte e significative
   try {
     // Identifica gruppi di parole che potrebbero formare concetti coesi
     const phrases = cleanedContent.split(/[,.!?;:]/g).filter(p => p.trim().length > 0);
     
     for (const phrase of phrases) {
-      if (phrase.split(/\s+/).length >= 2 && phrase.split(/\s+/).length <= 4) {
+      // Limita a frasi di 2-3 parole per evitare frasi troppo lunghe
+      const words = phrase.split(/\s+/);
+      if (words.length >= 2 && words.length <= 3) {
         // Questa è una frase di lunghezza ragionevole, potrebbe essere un concetto coeso
         const normalizedPhrase = phrase.trim().toLowerCase();
         
@@ -334,8 +476,8 @@ export async function generateTags(content: string, language: string): Promise<s
         
         // Se contiene candidati esistenti, potrebbe essere una frase significativa
         if (containsCandidate) {
-          // Prendi la frase come un unico tag se non è troppo lunga
-          if (normalizedPhrase.length < 25) {
+          // Limita la lunghezza massima del tag significativamente
+          if (normalizedPhrase.length > 3 && normalizedPhrase.length < 20) {
             tagCandidates.add(normalizedPhrase);
             tagScores[normalizedPhrase] = 6; // Buon punteggio per frasi semanticamente coese
           }
