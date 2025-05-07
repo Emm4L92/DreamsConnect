@@ -98,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (authorIds.length > 0) {
         // Utilizziamo un approccio diverso senza parametrizzazione IN
         const authorsQuery = await storage.db
-          .select({ id: users.id, username: users.username })
+          .select({ id: users.id, username: users.username, profileImage: users.profileImage })
           .from(users);
         
         const authors = authorsQuery.filter(author => authorIds.includes(author.id));
@@ -110,7 +110,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (author) {
             dream.author = {
               id: author.id,
-              username: author.username
+              username: author.username,
+              profileImage: author.profileImage
             };
           }
         }
