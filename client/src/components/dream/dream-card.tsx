@@ -130,7 +130,11 @@ export function DreamCard({ dream, className = "", showManage = false }: DreamCa
       <CardHeader className="p-0 pb-4">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
-            <PixelAvatar id={(dream.author?.id || 0) % 6} />
+            <PixelAvatar 
+              id={(dream.author?.id || 0) % 6} 
+              profileImage={dream.author?.profileImage}
+              username={dream.author?.username}
+            />
             <div>
               <h3 className="font-semibold">{dream.author?.username || "Anonymous"}</h3>
               <p className="text-xs text-gray-600">
