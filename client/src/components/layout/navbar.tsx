@@ -62,6 +62,11 @@ export function Navbar({ onMenuClick }: NavbarProps) {
               {t("Explore", language)}
             </a>
           </Link>
+          <Link to="/my-dreams">
+            <a className={`font-sans font-semibold ${location === '/my-dreams' ? 'text-primary' : 'hover:text-primary'} transition-colors`}>
+              {t("My Dreams", language)}
+            </a>
+          </Link>
           <Link to="/matches">
             <a className={`font-sans font-semibold ${location === '/matches' ? 'text-primary' : 'hover:text-primary'} transition-colors`}>
               {t("Matches", language)}

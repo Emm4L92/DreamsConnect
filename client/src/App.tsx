@@ -9,6 +9,7 @@ import { ProtectedRoute } from "./lib/protected-route";
 
 import HomePage from "@/pages/home-page";
 import ExplorePage from "@/pages/explore-page";
+import MyDreamsPage from "@/pages/my-dreams-page";
 import MatchesPage from "@/pages/matches-page";
 import ChatPage from "@/pages/chat-page";
 import AuthPage from "@/pages/auth-page";
@@ -20,6 +21,7 @@ function Router() {
     <Switch>
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/explore" component={ExplorePage} />
+      <ProtectedRoute path="/my-dreams" component={MyDreamsPage} />
       <ProtectedRoute path="/matches" component={MatchesPage} />
       <ProtectedRoute path="/chat" component={ChatPage} />
       <ProtectedRoute path="/chat/:matchId" component={ChatPage} />

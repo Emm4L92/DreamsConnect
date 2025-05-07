@@ -80,6 +80,12 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                 </a>
               </Link>
               
+              <Link href="/my-dreams" onClick={onClose}>
+                <a className={`font-sans font-medium text-lg px-2 py-3 border-b-2 border-black ${location === '/my-dreams' ? 'text-primary' : ''}`}>
+                  {t("My Dreams", language)}
+                </a>
+              </Link>
+              
               <Link href="/matches" onClick={onClose}>
                 <a className={`font-sans font-medium text-lg px-2 py-3 border-b-2 border-black ${location === '/matches' ? 'text-primary' : ''}`}>
                   {t("Matches", language)}
